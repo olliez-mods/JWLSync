@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jwlkit"
+version = "0.1.0"
+description = "Read, write and merge JW Library .jwlibrary backups, including 3-way merges that keep deletions."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+jwlkit = "jwlkit.cli:main"
+
+[tool.setuptools.package-data]
+jwlkit = ["schema16.sql", "default_thumbnail.png"]

@@ -1,0 +1,10 @@
+# Real user backups: personal data, never commit
+testdata/
+*.jwlibrary
+
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
