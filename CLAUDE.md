@@ -85,8 +85,15 @@ Test data: `testdata/originals/` — read-only copies of the user's real backups
 - `jwlsync/` — the service. `storage.py`: `Storage` interface over the three folders +
   `LocalStorage` (a directory on disk); the Drive layer will be a second implementation.
   `service.py`: `process(storage)` merges every settled upload in `JW Library Save`.
-  CLI: `python -m jwlsync {setup,process,watch} FOLDER`.
-- `tests/` — service tests (simulated devices + replay of the real backups).
+  `drive.py`: `DriveStorage` on a link-shared Drive folder via a narrow `DriveClient` interface;
+  `GoogleDrive` is the real adapter (Google libs imported lazily), `open_folder(client, link)` validates.
+  CLI: `python -m jwlsync {setup,process,watch} FOLDER|DRIVE_LINK [--token T]`,
+  `python -m jwlsync auth CLIENT_SECRETS --token T` (one-time bot login).
+- `requirements.txt` — Google libs for the Drive adapter only; everything else is stdlib.
+- `tests/` — service tests (simulated devices + replay of the real backups), Drive tests on an
+  in-memory fake (`fake_drive.py`), and `test_google_drive.py`: the real adapter against
+  googleapiclient's HttpMockSequence (skipped if the libs aren't installed). On this machine the
+  MSYS2 python can't build `cryptography`; use the Windows python (`py -3.12`) in a venv for the libs.
 - `docs/format-notes.md` — format + merge research.
 - `testdata/originals/` — the user's real backups, read-only. Personal data: never publish/commit.
 
@@ -112,7 +119,9 @@ app schema upgrades) — check alongside the device restore test.
       Base detection via stamp + content fallback (2026-10-31).
       Not yet done: restoring a jwlkit-written file on real devices (Android/iOS/Windows).
 - [x] 1b. Service core (`jwlsync`) on local storage — 11 tests pass incl. real-backup replay (2026-10-31).
-- [ ] 2. Drive layer (implement `Storage` on Drive)
+- [~] 2. Drive layer — `DriveStorage` + `GoogleDrive` adapter built and tested against a fake and
+      HTTP mocks (2026-10-31). Not yet run against real Drive: waiting on the bot account +
+      Cloud project (Drive API on, consent screen "In production", Desktop OAuth client).
 - [ ] 3. Change detection
 - [ ] 4. Setup page
 

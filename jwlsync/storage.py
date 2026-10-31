@@ -2,7 +2,7 @@
 
 The service only needs a few file operations on the three folders of a user's sync folder, so it
 talks to a `Storage`. `LocalStorage` keeps them in a directory on disk (for development and tests);
-a Drive implementation will map the same calls onto the user's shared Drive folder.
+`drive.DriveStorage` maps the same calls onto the user's shared Drive folder.
 
 File ids are opaque strings owned by the storage. Moving a file may give it a new id.
 """
@@ -39,7 +39,8 @@ class Storage(Protocol):
     def upload(self, folder: str, src: Path, name: str) -> Entry: ...
 
     def move(self, file_id: str, folder: str, name: str | None = None) -> Entry:
-        """Move a file into folder, optionally renaming it; an existing name gets a numeric suffix."""
+        """Move a file into folder, optionally renaming it. Whether a taken name gets a suffix is up
+        to the storage (Drive allows duplicate names)."""
 
     def read_text(self, name: str) -> str | None:
         """A text file in the User folder, or None if it doesn't exist."""
