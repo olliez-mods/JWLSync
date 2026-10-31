@@ -65,6 +65,18 @@ highlight was deleted keeps its text; tag links to deleted tags/notes are droppe
 highlight that overlaps another device's highlight replaces it unless that one has a note attached.
 Playlists merge as whole units.
 
+Tag and playlist renames are detected (a tag gone since the base and a new one of the same type
+sharing at least half its items), so links other devices added under the old name move to the new
+one instead of being dropped. The same tag renamed differently on two devices is a conflict, decided
+by `prefer`; the losing name is folded into the winner.
+
+## Finding the base
+
+Set `dataset.stamp = {"merge_id": ...}` before writing a merged file; it is stored in an extra
+`JWLSync` table. JW Library keeps the database file when restoring, so the device's next backup
+still carries the stamp. `find_base(upload, {merge_id: dataset, ...})` returns the stamped file, or
+else the candidate the upload still holds at least 98% of, or `None` (merge without a base).
+
 ## Format support
 
 - Schema versions 13–16 are read; output is always schema 16 (current JW Library).

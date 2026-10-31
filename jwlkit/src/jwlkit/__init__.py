@@ -19,11 +19,12 @@ import tempfile
 from pathlib import Path
 
 from .archive import Backup, BackupError, open_backup, pack
+from .base import BaseMatch, find_base
 from .merge import MergeReport, combine, merge
 from .model import Dataset, read_dataset, write_dataset
 
-__all__ = ["Backup", "BackupError", "Dataset", "MergeReport", "open_backup", "read", "merge", "combine",
-           "write_backup"]
+__all__ = ["Backup", "BackupError", "BaseMatch", "Dataset", "MergeReport", "open_backup", "read", "merge",
+           "combine", "find_base", "write_backup"]
 __version__ = "0.1.0"
 
 

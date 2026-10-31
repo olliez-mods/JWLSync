@@ -18,14 +18,19 @@ present on both sides are resolved like a conflict.
 
 Playlists merge as whole units (a playlist and its ordered items), since playlist items have no
 stable identity of their own.
+
+Tags are keyed by name, so a rename looks like a delete plus an add. Before merging, renames are
+detected on both sides (a tag gone since base and a new tag of the same type holding mostly the same
+items) and applied to the other datasets, so links other devices added to the old name follow it.
 """
 
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass, field
 
 from .archive import parse_time
-from .model import TABLES, TAG_PLAYLIST, Dataset
+from .model import TABLES, TAG_FAVORITE, TAG_PLAYLIST, Dataset
 
 _MISSING = object()
 
@@ -130,6 +135,8 @@ def merge(master: Dataset, upload: Dataset, base: Dataset | None = None,
     """
     master_wins = _master_wins(master, upload, prefer)
     rep = MergeReport()
+    if base:
+        base, master, upload = _apply_renames(base, master, upload, master_wins, rep)
     out = Dataset()
     for table in TABLES:
         setattr(out, table, _merge_table(table, getattr(base, table) if base else None,
@@ -150,6 +157,103 @@ def merge(master: Dataset, upload: Dataset, base: Dataset | None = None,
     touched = {g for g, m in side.usermarks.items() if ref.get(g) != m}
     repair(out, rep, prefer=touched)
     return out, rep
+
+
+# Share of items (Jaccard) a vanished and a new tag must have in common to count as a rename.
+RENAME_SIMILARITY = 0.5
+
+
+def _items_by_tag(ds: Dataset) -> dict[tuple, set]:
+    out: dict[tuple, set] = {}
+    for tkey, target in ds.tagmaps:
+        out.setdefault(tkey, set()).add(target)
+    for tkey, items in ds.playlists.items():
+        out.setdefault(tkey, set()).update(repr(i) for i in items)
+    return out
+
+
+def find_renames(base: Dataset, side: Dataset) -> dict[tuple, tuple]:
+    """Tags renamed on `side` since `base`, as {old key: new key}.
+
+    A tag missing from side pairs with a tag new on side of the same type when they share at least
+    RENAME_SIMILARITY of their items; best matches first. Two empty tags pair only when they're the
+    only vanished and only new tag of their type.
+    """
+    gone = [k for k in base.tags if k not in side.tags and k[0] != TAG_FAVORITE]
+    new = [k for k in side.tags if k not in base.tags and k[0] != TAG_FAVORITE]
+    if not gone or not new:
+        return {}
+    base_items, side_items = _items_by_tag(base), _items_by_tag(side)
+    pairs = []
+    for old in gone:
+        for cand in new:
+            if old[0] != cand[0]:
+                continue
+            a, b = base_items.get(old, set()), side_items.get(cand, set())
+            if a or b:
+                score = len(a & b) / len(a | b)
+            elif sum(k[0] == old[0] for k in gone) == 1 and sum(k[0] == old[0] for k in new) == 1:
+                score = 1.0
+            else:
+                continue
+            if score >= RENAME_SIMILARITY:
+                pairs.append((-score, repr(old), repr(cand), old, cand))
+    renames, taken = {}, set()
+    for *_, old, cand in sorted(pairs):
+        if old not in renames and cand not in taken:
+            renames[old] = cand
+            taken.add(cand)
+    return renames
+
+
+def _rekey(ds: Dataset, mapping: dict[tuple, tuple]) -> Dataset:
+    """Copy of ds with tags renamed per mapping; renaming onto an existing tag merges the two."""
+    mapping = {old: new for old, new in mapping.items() if old in ds.tags}
+    if not mapping:
+        return ds
+    out = copy.copy(ds)
+    out.tags = {}
+    for k, v in ds.tags.items():
+        if k in mapping:
+            out.tags.setdefault(mapping[k], {"name": mapping[k][1]})
+        else:
+            out.tags[k] = v
+    out.tagmaps = {}
+    for (tkey, target), pos in ds.tagmaps.items():
+        out.tagmaps.setdefault((mapping.get(tkey, tkey), target), pos)
+    out.playlists = {k: v for k, v in ds.playlists.items() if k not in mapping}
+    for old, new in mapping.items():
+        if old in ds.playlists:
+            kept = out.playlists.get(new, ())
+            out.playlists[new] = kept + tuple(i for i in ds.playlists[old] if i not in kept)
+    return out
+
+
+def _apply_renames(base: Dataset, master: Dataset, upload: Dataset, master_wins: bool,
+                   rep: MergeReport) -> tuple[Dataset, Dataset, Dataset]:
+    """Carry renames made on either side over to the other side and the base.
+
+    The same tag renamed differently on both sides is a conflict; the losing name is folded into
+    the winning one.
+    """
+    up, ms = find_renames(base, upload), find_renames(base, master)
+    to_base, to_master, to_upload = {}, {}, {}
+    for old in sorted(up.keys() | ms.keys(), key=repr):
+        u, m = up.get(old), ms.get(old)
+        new = u or m
+        if u and m and u != m:
+            rep.tables["tags"].conflicts += 1
+            new = m if master_wins else u
+            if master_wins:
+                to_upload[u] = m
+            else:
+                to_master[m] = u
+            rep.notes.append(f"tag {old[1]!r} renamed to both {m[1]!r} and {u[1]!r}; kept {new[1]!r}")
+        elif u and not m:
+            rep.tables["tags"].changed += 1
+            rep.notes.append(f"tag {old[1]!r} renamed to {u[1]!r}")
+        to_base[old] = to_master[old] = to_upload[old] = new
+    return _rekey(base, to_base), _rekey(master, to_master), _rekey(upload, to_upload)
 
 
 def combine(*datasets: Dataset, sort: bool = True) -> tuple[Dataset, MergeReport]:

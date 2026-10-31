@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from helpers import base_dataset, clone, loc, mark, note, roundtrip
 
 from jwlkit import combine, merge
+from jwlkit.merge import find_renames
 
 
 class ThreeWayMerge(unittest.TestCase):
@@ -105,6 +106,114 @@ class ThreeWayMerge(unittest.TestCase):
         again = roundtrip(out)
         for t in ("usermarks", "notes", "tags", "tagmaps", "bookmarks", "inputfields"):
             self.assertEqual(getattr(out, t), getattr(again, t), t)
+
+
+STUDY, BIBLE = (1, "Study"), (1, "Bible study")
+
+
+def rename(ds, old, new):
+    del ds.tags[old]
+    ds.tags[new] = {"name": new[1]}
+    ds.tagmaps = {((new if t == old else t), target): pos for (t, target), pos in ds.tagmaps.items()}
+    if old in ds.playlists:
+        ds.playlists[new] = ds.playlists.pop(old)
+
+
+def tagged(ds, tkey):
+    return {target for t, target in ds.tagmaps if t == tkey}
+
+
+class TagRenames(unittest.TestCase):
+    def setUp(self):
+        self.base = roundtrip(base_dataset())
+        self.g1 = loc()[0]
+
+    def test_rename_on_device_is_applied(self):
+        upload = clone(self.base)
+        rename(upload, STUDY, BIBLE)
+        out, rep = merge(clone(self.base), upload, self.base)
+        self.assertNotIn(STUDY, out.tags)
+        self.assertEqual(tagged(out, BIBLE), {("n", "n1"), ("n", "n2")})
+        self.assertEqual(rep.tables["tags"].changed, 1)
+        self.assertIn("renamed", rep.summary())
+        roundtrip(out)
+
+    def test_other_devices_links_follow_the_rename(self):
+        master, upload = clone(self.base), clone(self.base)
+        master.notes["n3"] = note(self.g1, "tagged elsewhere")
+        master.tagmaps[(STUDY, ("n", "n3"))] = 2
+        rename(upload, STUDY, BIBLE)
+        out, _ = merge(master, upload, self.base)
+        self.assertNotIn(STUDY, out.tags)
+        self.assertEqual(tagged(out, BIBLE), {("n", "n1"), ("n", "n2"), ("n", "n3")})
+        roundtrip(out)
+
+    def test_device_unaware_of_rename_tags_under_new_name(self):
+        # Another device renamed the tag earlier; this device still uses the old name.
+        master, upload = clone(self.base), clone(self.base)
+        rename(master, STUDY, BIBLE)
+        upload.tagmaps[(STUDY, ("l", self.g1))] = 2
+        out, rep = merge(master, upload, self.base)
+        self.assertNotIn(STUDY, out.tags)
+        self.assertEqual(tagged(out, BIBLE), {("n", "n1"), ("n", "n2"), ("l", self.g1)})
+        self.assertEqual(rep.tables["tags"].changed, 0)
+
+    def test_rename_with_added_item_is_still_a_rename(self):
+        master, upload = clone(self.base), clone(self.base)
+        master.tagmaps[(STUDY, ("l", self.g1))] = 2
+        rename(upload, STUDY, BIBLE)
+        upload.tagmaps[(BIBLE, ("l", loc(chapter=2)[0]))] = 2
+        out, _ = merge(master, upload, self.base)
+        self.assertNotIn(STUDY, out.tags)
+        self.assertEqual(tagged(out, BIBLE),
+                         {("n", "n1"), ("n", "n2"), ("l", self.g1), ("l", loc(chapter=2)[0])})
+
+    def test_conflicting_renames_fold_into_winner(self):
+        master, upload = clone(self.base), clone(self.base)
+        rename(master, STUDY, (1, "Research"))
+        rename(upload, STUDY, BIBLE)
+        master.tagmaps[((1, "Research"), ("l", self.g1))] = 2
+        out, rep = merge(master, upload, self.base)
+        self.assertEqual({k for k in out.tags if k[0] == 1}, {BIBLE})
+        self.assertIn(("l", self.g1), tagged(out, BIBLE))
+        self.assertEqual(rep.tables["tags"].conflicts, 1)
+        out, _ = merge(master, upload, self.base, prefer="master")
+        self.assertEqual({k for k in out.tags if k[0] == 1}, {(1, "Research")})
+        self.assertEqual(len(tagged(out, (1, "Research"))), 3)
+
+    def test_delete_and_unrelated_new_tag_is_not_a_rename(self):
+        master, upload = clone(self.base), clone(self.base)
+        master.tagmaps[(STUDY, ("l", self.g1))] = 2
+        del upload.tags[STUDY]
+        upload.tagmaps = {k: v for k, v in upload.tagmaps.items() if k[0] != STUDY}
+        upload.tags[(1, "Other")] = {"name": "Other"}
+        upload.tagmaps[((1, "Other"), ("l", loc(chapter=2)[0]))] = 0
+        out, _ = merge(master, upload, self.base)
+        self.assertNotIn(STUDY, out.tags)
+        self.assertEqual(tagged(out, (1, "Other")), {("l", loc(chapter=2)[0])})
+
+    def test_empty_tag_rename(self):
+        base = clone(self.base)
+        base.tags[(1, "Empty")] = {"name": "Empty"}
+        upload = clone(base)
+        rename(upload, (1, "Empty"), (1, "Still empty"))
+        self.assertEqual(find_renames(base, upload), {(1, "Empty"): (1, "Still empty")})
+
+    def test_playlist_rename_keeps_other_devices_edits(self):
+        old, new = (2, "Morning"), (2, "Mornings")
+
+        def item(label):
+            return {"label": label, "locations": (), "media": (), "markers": ()}
+
+        base = clone(self.base)
+        base.tags[old] = {"name": old[1]}
+        base.playlists[old] = (item("a"), item("b"))
+        master, upload = clone(base), clone(base)
+        master.playlists[old] = (item("a"), item("b"), item("c"))
+        rename(upload, old, new)
+        out, _ = merge(master, upload, base)
+        self.assertNotIn(old, out.playlists)
+        self.assertEqual([i["label"] for i in out.playlists[new]], ["a", "b", "c"])
 
 
 class Prefer(unittest.TestCase):

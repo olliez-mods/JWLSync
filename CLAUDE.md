@@ -82,17 +82,37 @@ Test data: `testdata/originals/` — read-only copies of the user's real backups
 ## Layout
 - `jwlkit/` — the merge engine as a standalone, dependency-free Python package (own pyproject,
   README, CLI, tests). Usable outside JWLSync; the service will import it.
+- `jwlsync/` — the service. `storage.py`: `Storage` interface over the three folders +
+  `LocalStorage` (a directory on disk); the Drive layer will be a second implementation.
+  `service.py`: `process(storage)` merges every settled upload in `JW Library Save`.
+  CLI: `python -m jwlsync {setup,process,watch} FOLDER`.
+- `tests/` — service tests (simulated devices + replay of the real backups).
 - `docs/format-notes.md` — format + merge research.
 - `testdata/originals/` — the user's real backups, read-only. Personal data: never publish/commit.
 
-Run tests: `cd jwlkit && PYTHONPATH="src;tests" JWLKIT_TESTDATA=../testdata/originals python -m unittest discover -s tests`
+Run tests:
+- `cd jwlkit && PYTHONPATH="src;tests" JWLKIT_TESTDATA=../testdata/originals python -m unittest discover -s tests`
+- `PYTHONPATH="jwlkit/src;jwlkit/tests;." JWLKIT_TESTDATA=testdata/originals python -m unittest discover -s tests`
+  (add `JWLSYNC_VERBOSE=1` to print the replay's per-upload decisions)
+
+## Stamping (how the base is found)
+Restoring keeps the database file itself: in the test data, rows of restored go-jwlm merges came
+back in later iPad/PC backups with identical integer IDs, and the iPad even kept go-jwlm's schema
+text. So every merged file gets an extra `JWLSync(Key, Value)` table (merge_id, seq, created,
+source, base) and the device's next backup carries it back. Base = stamp → else content match
+(≥98% of a recent merged file's entries present, `jwlkit.base`) → else none (union, no deletes).
+App state in `User/state.json` (current merge id, merge id → file id), log in `User/merge-log.txt`.
+Unverified: that the extra table survives restore + backup on each platform (esp. Android, and
+app schema upgrades) — check alongside the device restore test.
 
 ## Status
-- [x] 1. Merge engine (`jwlkit`) — 17 tests pass, all 20 real backups round-trip identically.
+- [x] 1. Merge engine (`jwlkit`) — 40 tests pass, all 20 real backups round-trip identically.
       Real 3-way check: PC upload vs the merge it restored applied exactly its 13 changes.
-      Not yet done: per-device base detection helper (match an upload to the History file it
-      most resembles); restoring a jwlkit-written file on real devices (Android/iOS/Windows).
-- [ ] 2. Drive layer
+      Tag/playlist renames detected by item overlap and carried across devices (2026-10-31).
+      Base detection via stamp + content fallback (2026-10-31).
+      Not yet done: restoring a jwlkit-written file on real devices (Android/iOS/Windows).
+- [x] 1b. Service core (`jwlsync`) on local storage — 11 tests pass incl. real-backup replay (2026-10-31).
+- [ ] 2. Drive layer (implement `Storage` on Drive)
 - [ ] 3. Change detection
 - [ ] 4. Setup page
 

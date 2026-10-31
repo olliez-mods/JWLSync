@@ -16,6 +16,10 @@ Keys used:
     InputField (location key, TextTag)
     Playlist   tag key of a type-2 tag; the value is its ordered tuple of items
     Media      IndependentMedia.Hash
+
+A Dataset can also carry a stamp: key/value strings stored in an extra `JWLSync` table that
+JW Library doesn't know about. Restoring a backup keeps its database file, so the stamp comes back
+in that device's next backup and identifies the file it restored (see jwlkit.base).
 """
 
 from __future__ import annotations
@@ -36,6 +40,8 @@ TAG_PLAYLIST = 2
 
 # Tables merged entry-by-entry, in the order they're written.
 TABLES = ("tags", "usermarks", "notes", "tagmaps", "bookmarks", "inputfields", "playlists")
+
+STAMP_TABLE = "JWLSync"
 
 
 def location_key(row) -> tuple:
@@ -70,6 +76,8 @@ class Dataset:
     media_files: dict[str, Path] = field(default_factory=dict)
     # When the source backup last changed (Backup.last_modified); used by prefer="newer" and combine.
     last_modified: datetime | None = None
+    # Contents of the JWLSync table; not merged, the writer of a merged file sets it.
+    stamp: dict[str, str] = field(default_factory=dict)
 
     def counts(self) -> dict[str, int]:
         return {t: len(getattr(self, t)) for t in TABLES}
@@ -88,6 +96,7 @@ def _get(row: sqlite3.Row, col: str):
 def read_dataset(conn: sqlite3.Connection, media_dir: dict[str, Path] | None = None) -> Dataset:
     conn.row_factory = sqlite3.Row
     ds = Dataset()
+    ds.stamp = {r["Key"]: r["Value"] for r in _rows(conn, STAMP_TABLE)}
 
     loc_by_id: dict[int, tuple] = {}
     for r in _rows(conn, "Location"):
@@ -353,6 +362,9 @@ def write_dataset(ds: Dataset, db_path: Path) -> tuple[dict[str, Path], int]:
     try:
         w = _Writer(conn, ds)
         w.write()
+        if ds.stamp:
+            conn.execute(f"CREATE TABLE {STAMP_TABLE} (Key TEXT NOT NULL PRIMARY KEY, Value TEXT NOT NULL)")
+            conn.executemany(f"INSERT INTO {STAMP_TABLE} (Key, Value) VALUES (?, ?)", sorted(ds.stamp.items()))
         bad = conn.execute("PRAGMA foreign_key_check").fetchall()
         if bad:
             raise ValueError(f"foreign key violations in written database: {bad[:5]}")
