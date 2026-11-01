@@ -4,6 +4,7 @@ from quick_ini import QuickIni
 
 import db
 from drive import DriveError, folder_key, open_storage
+from storage import INFO, page_link, write_info
 
 # INI file =============================================================
 if(not QuickIni.load_file("config.ini", template=True)):
@@ -11,6 +12,7 @@ if(not QuickIni.load_file("config.ini", template=True)):
 db_path = QuickIni.get_value("db_path", "./jwlsync.db")
 client_secret_path = QuickIni.get_value("client_secret_path", "./secrets/client_secret.json")
 token_path = QuickIni.get_value("token_path", "./secrets/token.json")
+site_url = QuickIni.get_value("site_url")
 # ======================================================================
 
 db.set_db(db_path)
@@ -44,7 +46,17 @@ def pick_invite():
 def create_invite():
     name = input("Name (who it's for): ").strip()
     if name:
-        print(f"Invite code for {name}: {db.create_invite(name)}")
+        code = db.create_invite(name)
+        print(f"Invite code for {name}: {code}")
+        if site_url:
+            print(f"Invite link: {page_link(site_url, code)}")
+
+
+def update_info(link, name, code):
+    try:
+        write_info(open_storage(link, token_path, client_secret_path), name, page_link(site_url, code))
+    except Exception as e:
+        print(f"Couldn't update {name}'s {INFO}: {e}")
 
 
 def add_folder():
@@ -64,6 +76,7 @@ def add_folder():
     except (DriveError, ValueError) as e:
         print(f"Couldn't add it: {e}")
         return
+    update_info(link, invite["name"], invite["code"])
     print(f"Tracking {invite['name']}'s folder; the watcher picks it up on its next pass")
 
 
@@ -85,7 +98,10 @@ def change_status():
 def regenerate_code():
     r = pick_invite()
     if r:
-        print(f"New code for {r['name']}: {db.regenerate_code(r['id'])} (the old one no longer works)")
+        code = db.regenerate_code(r["id"])
+        print(f"New code for {r['name']}: {code} (the old one no longer works)")
+        if r["link"]:
+            update_info(r["link"], r["name"], code)
 
 
 def toggle_revoked():

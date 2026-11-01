@@ -151,7 +151,7 @@ def active_folders() -> list[sqlite3.Row]:
     """Folders the watch loop should process, with the invite's name."""
     with get_db() as conn:
         return conn.execute('''
-            SELECT folders.*, invites.name FROM folders JOIN invites ON invites.id = folders.invite_id
+            SELECT folders.*, invites.name, invites.code FROM folders JOIN invites ON invites.id = folders.invite_id
             WHERE folders.status = 'active' AND invites.revoked = 0
         ''').fetchall()
 

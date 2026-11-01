@@ -104,6 +104,10 @@ Test data: `testdata/originals/` — read-only copies of the user's real backups
   off when empty) create invites, table of everyone, same actions as admin.py. Session cookie holds
   the code (regenerate/revoke logs them out); 10 wrong codes per IP per 10 min → 429.
   `secret_key` is generated into config.ini on first run; `secure_cookie=false` to test over http.
+  Invite links: `site_url/?code=XXXXX-XXXXX` signs in like typing the code, then redirects to `/`.
+  `User/JWLSync.txt` (storage.write_info): the person's invite link + how-to + what the folders are.
+  Written on setup (web/admin.py), on regenerate, and whenever main.py opens a folder and it's
+  missing or out of date.
   `storage.py`: `Storage` interface over the folders + `LocalStorage` (a directory on disk).
   `service.py`: `process(storage)` handles everything in `JW Library Save` as one batch.
   `drive.py`: `DriveStorage` on a link-shared Drive folder via a narrow `DriveClient` interface;

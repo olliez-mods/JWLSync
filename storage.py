@@ -112,3 +112,41 @@ class LocalStorage:
         tmp = path.with_name(path.name + ".tmp")
         tmp.write_text(text, encoding="utf-8")
         tmp.replace(path)
+
+
+# User/JWLSync.txt: the person's page link and how to use the folder ====
+INFO = "JWLSync.txt"
+
+
+def info_text(name: str, link: str | None) -> str:
+    page = (f"Your page: {link}\n"
+            "It shows your sync status and recent merges. Keep it private: it signs in as you.\n\n") if link else ""
+    return f"""JWLSync - {name}'s folder
+
+{page}How to use
+1. In JW Library, make a backup and save it into the "{SAVE}" folder here.
+2. Wait about 10 seconds. JWLSync merges it with your other devices' backups, and
+   "{SAVE}" is left with one file: the merged backup.
+3. On any device, restore that merged backup in JW Library.
+
+Always back up before you restore. Restoring replaces everything on the device, so
+anything changed since that device's last backup would be lost.
+
+Folders
+{SAVE}  - back up here and restore from here; holds only the current merged backup
+{MERGED}  - previous merged backups
+{UPLOADS}  - every backup you've uploaded
+{USER}  - this file, and merge-log.txt (what each merge did)
+"""
+
+
+def write_info(storage: Storage, name: str, link: str | None) -> None:
+    """Write User/JWLSync.txt, unless it already says the same."""
+    text = info_text(name, link)
+    if storage.read_text(INFO) != text:
+        storage.write_text(INFO, text)
+
+
+def page_link(site_url: str | None, code: str) -> str | None:
+    """The person's invite link (which is also how they get back to their page)."""
+    return f"{site_url.rstrip('/')}/?code={code}" if site_url else None

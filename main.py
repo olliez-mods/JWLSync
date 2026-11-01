@@ -8,6 +8,7 @@ import db
 import web
 from drive import open_storage
 from service import process
+from storage import page_link, write_info
 
 # INI file =============================================================
 if(not QuickIni.load_file("config.ini", template=True)):
@@ -20,6 +21,7 @@ settle = QuickIni.get_value("settle", 5, (int, float))
 web_host = QuickIni.get_value("web_host", "127.0.0.1")
 web_port = QuickIni.get_value("web_port", 5080, int)
 secure_cookie = QuickIni.get_value("secure_cookie", True, bool)
+site_url = QuickIni.get_value("site_url")
 admin_code = str(QuickIni.get_value("admin_code") or "")
 secret_key = QuickIni.get_value("secret_key")
 if(not secret_key):
@@ -30,7 +32,7 @@ if(not secret_key):
 db.set_db(db_path)
 db.setup_db()
 
-web.configure(str(secret_key), admin_code, token_path, client_secret_path, secure_cookie)
+web.configure(str(secret_key), admin_code, token_path, client_secret_path, secure_cookie, site_url)
 web.start(web_host, web_port)
 
 # Folders are read from the database every pass, so ones added, paused or stopped (admin.py,
@@ -48,6 +50,7 @@ while True:
             if storage is None:
                 storage = open_storage(row["link"], token_path, client_secret_path)
                 storage.setup()
+                write_info(storage, row["name"], page_link(site_url, row["code"]))
                 storages[row["id"]] = storage
                 print(f"Watching {row['name']}'s folder")
             results = process(storage, settle=settle)

@@ -16,6 +16,7 @@ from werkzeug.serving import make_server
 
 import db
 from drive import DriveError, folder_key, open_storage
+from storage import INFO, page_link, write_info
 
 app = Flask(__name__)
 # Behind QuickRoute every request comes from 127.0.0.1; use the visitor's address it passes on
@@ -23,10 +24,21 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 settings = {}
 
 
-def configure(secret_key:str, admin_code:str, token_path:str, client_secret_path:str, secure_cookie:bool = True):
+def configure(secret_key:str, admin_code:str, token_path:str, client_secret_path:str, secure_cookie:bool = True,
+              site_url:str | None = None):
     app.secret_key = secret_key
     app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax", SESSION_COOKIE_SECURE=secure_cookie)
-    settings.update(admin_code=admin_code, token_path=token_path, client_secret_path=client_secret_path)
+    settings.update(admin_code=admin_code, token_path=token_path, client_secret_path=client_secret_path,
+                    site_url=site_url)
+
+
+def update_info(folder, name:str, code:str) -> None:
+    """Rewrite the folder's User/JWLSync.txt; a failure here never blocks the action that triggered it."""
+    try:
+        storage = open_storage(folder["link"], settings["token_path"], settings["client_secret_path"])
+        write_info(storage, name, invite_link(code))
+    except Exception as e:
+        print(f"Couldn't update {name}'s {INFO}: {e}")
 
 
 def start(host:str, port:int):
@@ -159,8 +171,8 @@ def sign_in(code:str):
 
 @app.template_global()
 def invite_link(code:str) -> str:
-    # https://jwlsync.antinoid.com/?code=... (host and scheme come from QuickRoute's forwarded headers)
-    return url_for("index", code=code, _external=True)
+    # https://jwlsync.antinoid.com/?code=...: site_url from config.ini, else the address this request came in on
+    return page_link(settings.get("site_url"), code) or url_for("index", code=code, _external=True)
 
 
 @app.post("/folder")
@@ -178,7 +190,8 @@ def add_folder():
         try:
             storage = open_storage(link, settings["token_path"], settings["client_secret_path"])
             storage.setup()
-            db.add_folder(invite["id"], link, folder_key(link))
+            folder_pk = db.add_folder(invite["id"], link, folder_key(link))
+            update_info({"id": folder_pk, "link": link}, invite["name"], invite["code"])
         except (DriveError, ValueError) as e:
             error = str(e)
         except Exception:
@@ -263,7 +276,11 @@ def admin_action():
     if action in ("pause", "resume", "stop") and folder:
         db.set_status(folder["id"], {"pause": "paused", "resume": "active", "stop": "stopped"}[action])
     elif action == "regenerate":
-        return admin_page(new_code=db.regenerate_code(invite_id), new_name="(regenerated)")
+        code = db.regenerate_code(invite_id)
+        name = next(r["name"] for r in db.list_invites() if r["id"] == invite_id)
+        if folder:
+            update_info(folder, name, code)  # the link in their Drive folder would be dead otherwise
+        return admin_page(new_code=code, new_name=name)
     elif action in ("revoke", "unrevoke"):
         db.set_revoked(invite_id, action == "revoke")
     return redirect(url_for("admin"))
