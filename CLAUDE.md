@@ -88,8 +88,10 @@ Test data: `testdata/originals/` — read-only copies of the user's real backups
   `service.py`: `process(storage)` merges every settled upload in `JW Library Save`.
   `drive.py`: `DriveStorage` on a link-shared Drive folder via a narrow `DriveClient` interface;
   `GoogleDrive` is the real adapter (Google libs imported lazily), `open_folder(client, link)` validates.
-  CLI: `python -m jwlsync {setup,process,watch} FOLDER|DRIVE_LINK [--token T]`,
-  `python -m jwlsync auth CLIENT_SECRETS --token T` (one-time bot login).
+  CLI: `python -m jwlsync {setup,process,watch} [FOLDER|DRIVE_LINK] [--token T] [--config F]`,
+  `python -m jwlsync auth CLIENT_SECRETS --token T` (one-time bot login). Settings from
+  `jwlsync.ini` (git-ignored; template `jwlsync.example.ini`): token, interval, settle, and
+  `[folders]` — with no FOLDER given, the command runs on all of them.
 - `requirements.txt` — Google libs for the Drive adapter only; everything else is stdlib.
 - `tests/` — service tests (simulated devices + replay of the real backups), Drive tests on an
   in-memory fake (`fake_drive.py`), and `test_google_drive.py`: the real adapter against

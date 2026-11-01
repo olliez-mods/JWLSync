@@ -11,3 +11,6 @@ dist/
 
 # OAuth client file and bot token: never commit
 secrets/
+
+# Local settings: folder links grant edit access
+jwlsync.ini
