@@ -19,7 +19,7 @@ from drive import DriveError, folder_key, open_storage
 
 app = Flask(__name__)
 # Behind QuickRoute every request comes from 127.0.0.1; use the visitor's address it passes on
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 settings = {}
 
 
@@ -132,6 +132,9 @@ def ago(stamp:str | None) -> str:
 # Main page ============================================================
 @app.get("/")
 def index():
+    # An invite link (/?code=XXXXX-XXXXX) signs in like typing the code
+    if request.args.get("code"):
+        return sign_in(request.args["code"])
     invite = current_invite()
     folder = db.get_folder(invite["id"]) if invite else None
     return render_template("index.html", invite=invite, folder=folder)
@@ -139,14 +142,25 @@ def index():
 
 @app.post("/code")
 def enter_code():
+    return sign_in(request.form.get("code", ""))
+
+
+def sign_in(code:str):
     if blocked():
         return render_template("index.html", error="Too many wrong codes, try again in a few minutes"), 429
-    invite = db.get_invite(request.form.get("code", ""))
+    invite = db.get_invite(code)
     if invite is None or invite["revoked"]:
         failed()
         return render_template("index.html", error="That code isn't valid"), 400
     session["code"] = invite["code"]
+    # Redirect either way, so a code from a link doesn't stay in the address bar
     return redirect(url_for("me") if db.get_folder(invite["id"]) else url_for("index"))
+
+
+@app.template_global()
+def invite_link(code:str) -> str:
+    # https://jwlsync.antinoid.com/?code=... (host and scheme come from QuickRoute's forwarded headers)
+    return url_for("index", code=code, _external=True)
 
 
 @app.post("/folder")

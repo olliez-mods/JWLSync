@@ -6,7 +6,10 @@
     <div class="section-title">Create Invite</div>
     {% if error %}<div class="status-display bad">{{ error }}</div>{% endif %}
     {% if new_code %}
-        <div class="status-display good">Code for {{ new_name }}: <span class="code">{{ new_code }}</span></div>
+        <div class="status-display good">
+            Code for {{ new_name }}: <span class="code">{{ new_code }}</span>
+            <div class="detail">Invite link: <a href="{{ invite_link(new_code) }}">{{ invite_link(new_code) }}</a></div>
+        </div>
     {% endif %}
     <form class="row" method="post" action="{{ url_for('admin_invite') }}">
         <input name="name" placeholder="Name (who it's for)" aria-label="Name" required>
@@ -28,7 +31,7 @@
                 <td><b>{{ r["name"] }}</b>
                     {% if r["link"] %}<br><a href="{{ r['link'] }}" target="_blank" rel="noopener">folder ↗</a>{% endif %}
                 </td>
-                <td>{{ r["code"] }}</td>
+                <td><a href="{{ invite_link(r['code']) }}" title="Invite link: right click to copy">{{ r["code"] }}</a></td>
                 <td><span class="tag {{ state }}">{{ "no folder" if state == "none" else state }}</span>
                     {% if r["last_error"] %}<span class="err">{{ r["last_error"] }}</span>{% endif %}
                 </td>
