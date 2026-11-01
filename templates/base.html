@@ -3,14 +3,13 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="color-scheme" content="light dark">
     <title>{% block title %}JWLSync{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <main class="{% block main_class %}{% endblock %}">
         <header>
-            <h1>{% block heading %}JWLSync{% endblock %}</h1>
+            <h1>JWLSync</h1>
             {% block subheading %}{% endblock %}
         </header>
         {% block content %}{% endblock %}

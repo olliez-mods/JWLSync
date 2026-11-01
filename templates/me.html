@@ -2,20 +2,18 @@
 {% block title %}Your folder · JWLSync{% endblock %}
 {% block subheading %}<p>{{ invite["name"] }}'s folder</p>{% endblock %}
 {% block content %}
-<div class="card">
-    <div class="status-line">
-        <span class="pill {{ folder['status'] }}">{{ folder["status"]|capitalize }}</span>
+{% set label = {"active": "Syncing", "paused": "Paused", "stopped": "Stopped"}[folder["status"]] %}
+<div class="section">
+    <div class="section-head">
+        <h2>Status</h2>
         <a class="muted" href="{{ folder['link'] }}" target="_blank" rel="noopener">Open Drive folder ↗</a>
     </div>
-
-    <div class="stats">
-        <div class="stat"><div class="label">Last checked</div><div class="value">{{ folder["last_check"]|ago }}</div></div>
-        <div class="stat"><div class="label">Last merge</div><div class="value">{{ folder["last_merge"]|ago }}</div></div>
+    <div class="banner {{ folder['status'] }}">
+        <b>{{ label }}</b>
+        <span>Last checked {{ folder["last_check"]|ago }} · last merge {{ folder["last_merge"]|ago }}</span>
     </div>
-
     {% if folder["last_error"] %}<p class="error">Last check failed: {{ folder["last_error"] }}</p>{% endif %}
-
-    <form class="row" method="post" action="{{ url_for('me_status') }}">
+    <form class="actions" method="post" action="{{ url_for('me_status') }}">
         {% if folder["status"] == "active" %}
             <button name="action" value="pause" class="secondary">Pause</button>
         {% else %}
@@ -28,28 +26,28 @@
     </form>
 </div>
 
-<div class="card">
+<div class="section">
     <h2>Recent merges</h2>
+    <div class="inset">
     {% if recent is none %}
-        <p class="muted">Couldn't read your merge log right now.</p>
+        <div class="empty">Couldn't read your merge log right now.</div>
     {% elif not recent %}
-        <p class="muted">Nothing yet. Back up from a device into <i>JW Library Save</i>.</p>
+        <div class="empty">Nothing yet. Back up from a device into <i>JW Library Save</i>.</div>
     {% else %}
-        <ul class="merges">
         {% for m in recent %}
-            <li>
-                <div class="head">
-                    <span><b>{{ m.device }}</b> · {{ m.outcome }}</span>
-                    <span class="muted">{{ m.when|ago }}</span>
-                </div>
-                {% if m.changes %}<div class="changes">{{ m.changes|join(" · ") }}</div>{% endif %}
-            </li>
+        <div class="item">
+            <div class="item-head">
+                <span><b>{{ m.device }}</b> · {{ m.outcome }}</span>
+                <span class="muted">{{ m.when|ago }}</span>
+            </div>
+            {% if m.changes %}<div class="item-sub">{{ m.changes|join(" · ") }}</div>{% endif %}
+        </div>
         {% endfor %}
-        </ul>
     {% endif %}
+    </div>
 </div>
 
-<form class="row end" method="post" action="{{ url_for('logout') }}">
+<form class="actions" method="post" action="{{ url_for('logout') }}">
     <button class="secondary small">Sign out</button>
 </form>
 {% endblock %}

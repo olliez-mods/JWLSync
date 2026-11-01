@@ -3,64 +3,71 @@
 {% block main_class %}wide{% endblock %}
 {% block subheading %}<p>Admin</p>{% endblock %}
 {% block content %}
-<div class="card">
+<div class="section">
+    <h2>Create invite</h2>
     {% if error %}<p class="error">{{ error }}</p>{% endif %}
     {% if new_code %}
-        <p class="muted">Code for {{ new_name }}:</p>
+        <p class="muted center">Code for {{ new_name }}</p>
         <div class="code-box">{{ new_code }}</div>
     {% endif %}
-    <form class="row" method="post" action="{{ url_for('admin_invite') }}">
-        <input name="name" placeholder="Name (who it's for)" aria-label="Name" style="flex: 1; min-width: 180px" required>
+    <form class="inline" method="post" action="{{ url_for('admin_invite') }}">
+        <input name="name" placeholder="Name (who it's for)" aria-label="Name" required>
         <button>Create invite</button>
     </form>
 </div>
 
-<div class="card table-scroll">
-    <table>
-        <tr><th>Name</th><th>Code</th><th>Status</th><th>Last check</th><th>Last merge</th><th></th></tr>
-        {% for r in invites %}
-        {% set state = "revoked" if r["revoked"] else (r["status"] or "no folder") %}
-        <tr>
-            <td><b>{{ r["name"] }}</b>
-                {% if r["link"] %}<br><a class="muted" href="{{ r['link'] }}" target="_blank" rel="noopener">Drive folder ↗</a>{% endif %}
-            </td>
-            <td><code>{{ r["code"] }}</code></td>
-            <td><span class="pill {{ state }}">{{ state|capitalize }}</span>
-                {% if r["last_error"] %}<span class="error">{{ r["last_error"] }}</span>{% endif %}
-            </td>
-            <td class="muted">{{ r["last_check"]|ago if r["link"] else "" }}</td>
-            <td class="muted">{{ r["last_merge"]|ago if r["link"] else "" }}</td>
-            <td>
-                <form method="post" action="{{ url_for('admin_action') }}">
-                    <input type="hidden" name="invite_id" value="{{ r['id'] }}">
-                    {% if r["link"] and not r["revoked"] %}
-                        {% if r["status"] == "active" %}
-                            <button class="small secondary" name="action" value="pause">Pause</button>
+<div class="section">
+    <div class="section-head">
+        <h2>People</h2>
+        <span class="muted">{{ invites|length }} invite{{ "" if invites|length == 1 else "s" }}</span>
+    </div>
+    <div class="inset table">
+        <table>
+            <tr><th>Name</th><th>Code</th><th>Status</th><th>Last check</th><th>Last merge</th><th></th></tr>
+            {% for r in invites %}
+            {% set state = "revoked" if r["revoked"] else (r["status"] or "no folder") %}
+            <tr>
+                <td><b>{{ r["name"] }}</b>
+                    {% if r["link"] %}<br><a class="muted" href="{{ r['link'] }}" target="_blank" rel="noopener">Drive folder ↗</a>{% endif %}
+                </td>
+                <td><code>{{ r["code"] }}</code></td>
+                <td><span class="tag {{ state }}">{{ state|capitalize }}</span>
+                    {% if r["last_error"] %}<span class="err">{{ r["last_error"] }}</span>{% endif %}
+                </td>
+                <td class="muted">{{ r["last_check"]|ago if r["link"] else "" }}</td>
+                <td class="muted">{{ r["last_merge"]|ago if r["link"] else "" }}</td>
+                <td>
+                    <form method="post" action="{{ url_for('admin_action') }}">
+                        <input type="hidden" name="invite_id" value="{{ r['id'] }}">
+                        {% if r["link"] and not r["revoked"] %}
+                            {% if r["status"] == "active" %}
+                                <button class="small secondary" name="action" value="pause">Pause</button>
+                            {% else %}
+                                <button class="small secondary" name="action" value="resume">Resume</button>
+                            {% endif %}
+                            {% if r["status"] != "stopped" %}
+                                <button class="small secondary" name="action" value="stop">Stop</button>
+                            {% endif %}
+                        {% endif %}
+                        <button class="small secondary" name="action" value="regenerate"
+                                onclick='return confirm({{ ("Give " ~ r["name"] ~ " a new code? The old one stops working.")|tojson }})'>New code</button>
+                        {% if r["revoked"] %}
+                            <button class="small secondary" name="action" value="unrevoke">Unrevoke</button>
                         {% else %}
-                            <button class="small secondary" name="action" value="resume">Resume</button>
+                            <button class="small danger" name="action" value="revoke"
+                                    onclick='return confirm({{ ("Revoke " ~ r["name"] ~ "? Their folder stops syncing.")|tojson }})'>Revoke</button>
                         {% endif %}
-                        {% if r["status"] != "stopped" %}
-                            <button class="small secondary" name="action" value="stop">Stop</button>
-                        {% endif %}
-                    {% endif %}
-                    <button class="small secondary" name="action" value="regenerate"
-                            onclick='return confirm({{ ("Give " ~ r["name"] ~ " a new code? The old one stops working.")|tojson }})'>New code</button>
-                    {% if r["revoked"] %}
-                        <button class="small secondary" name="action" value="unrevoke">Unrevoke</button>
-                    {% else %}
-                        <button class="small danger" name="action" value="revoke"
-                                onclick='return confirm({{ ("Revoke " ~ r["name"] ~ "? Their folder stops syncing.")|tojson }})'>Revoke</button>
-                    {% endif %}
-                </form>
-            </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="6" class="muted">No invites yet</td></tr>
-        {% endfor %}
-    </table>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="muted center">No invites yet</td></tr>
+            {% endfor %}
+        </table>
+    </div>
 </div>
 
-<form class="row end" method="post" action="{{ url_for('admin_logout') }}">
+<form class="actions" method="post" action="{{ url_for('admin_logout') }}">
     <button class="secondary small">Sign out</button>
 </form>
 {% endblock %}

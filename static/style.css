@@ -1,35 +1,20 @@
 :root {
-    --bg: #f6f7f9;
+    --bg: #f4f5f7;
     --card: #ffffff;
-    --border: #e4e7ec;
+    --inset: #f8f9fb;
+    --border: #e2e5ea;
     --text: #1d2433;
-    --muted: #667085;
+    --muted: #6b7280;
     --accent: #3563e9;
-    --accent-text: #ffffff;
-    --soft: #f1f3f6;
-    --green: #157f3c;
-    --green-bg: #e7f6ec;
-    --amber: #a15c07;
-    --amber-bg: #fdf3e1;
-    --red: #c4320a;
-    --red-bg: #fdecea;
-}
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg: #111318;
-        --card: #1a1d24;
-        --border: #2b303b;
-        --text: #e6e8ec;
-        --muted: #9aa3b2;
-        --accent: #5b82f0;
-        --soft: #232731;
-        --green: #5fd18b;
-        --green-bg: #183224;
-        --amber: #f0b45b;
-        --amber-bg: #3a2c14;
-        --red: #f2877a;
-        --red-bg: #3b1d19;
-    }
+    --green: #166534;
+    --green-bg: #e8f6ed;
+    --green-border: #b7e2c4;
+    --amber: #92400e;
+    --amber-bg: #fdf4e3;
+    --amber-border: #f2d9a6;
+    --red: #b42318;
+    --red-bg: #fdeceb;
+    --red-border: #f5c2bd;
 }
 
 * {
@@ -38,107 +23,129 @@
 body {
     margin: 0;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    font-size: 16px;
+    font-size: 15px;
     line-height: 1.55;
     background: var(--bg);
     color: var(--text);
 }
 main {
-    max-width: 480px;
+    max-width: 520px;
     margin: 0 auto;
-    padding: 48px 16px 32px;
+    padding: 40px 16px 32px;
 }
 main.wide {
-    max-width: 960px;
+    max-width: 980px;
 }
 a {
     color: var(--accent);
 }
 
+/* Page header */
 header {
     text-align: center;
-    margin-bottom: 28px;
+    margin-bottom: 24px;
 }
 header h1 {
     margin: 0;
-    font-size: 26px;
+    font-size: 28px;
     font-weight: 700;
     letter-spacing: -0.02em;
 }
 header p {
-    margin: 4px 0 0;
+    margin: 2px 0 0;
     color: var(--muted);
 }
 footer {
     text-align: center;
     color: var(--muted);
-    font-size: 13px;
-    margin-top: 32px;
+    font-size: 12px;
+    margin-top: 28px;
 }
 
-.card {
+/* Sections: white box, bold title, content */
+.section {
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 24px;
-    margin-bottom: 16px;
+    border-radius: 10px;
+    padding: 18px 20px 20px;
+    margin-bottom: 14px;
 }
-.card > :first-child {
-    margin-top: 0;
+.section > h2 {
+    margin: 0 0 12px;
+    font-size: 15px;
+    font-weight: 700;
 }
-.card > :last-child {
+.section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+.section-head h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+}
+.section > :last-child {
     margin-bottom: 0;
 }
-h2 {
-    font-size: 15px;
-    font-weight: 600;
-    margin: 0 0 12px;
+.center {
+    text-align: center;
 }
 
+/* Inputs and buttons */
 form.stack {
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
+form.inline {
+    display: flex;
+    gap: 8px;
+}
+form.inline input {
+    flex: 1;
+    min-width: 0;
+}
 input {
     width: 100%;
-    padding: 11px 14px;
+    padding: 10px 12px;
     font: inherit;
     color: var(--text);
     background: var(--card);
-    border: 1px solid var(--border);
+    border: 1px solid #cfd4dc;
     border-radius: 8px;
     outline: none;
 }
 input:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+    box-shadow: 0 0 0 3px rgba(53, 99, 233, 0.18);
 }
 input.code {
     text-align: center;
     font-size: 20px;
+    font-weight: 600;
     letter-spacing: 0.15em;
     text-transform: uppercase;
 }
 input.code::placeholder {
-    letter-spacing: 0.15em;
+    font-weight: 400;
 }
-
 button, a.button {
     display: inline-block;
-    padding: 10px 18px;
+    padding: 9px 18px;
     font: inherit;
-    font-weight: 500;
+    font-weight: 600;
     text-align: center;
     text-decoration: none;
-    color: var(--accent-text);
+    color: #fff;
     background: var(--accent);
-    border: 1px solid transparent;
+    border: 1px solid var(--accent);
     border-radius: 8px;
     cursor: pointer;
 }
 button:hover, a.button:hover {
-    filter: brightness(0.94);
+    filter: brightness(0.93);
 }
 button:focus-visible, a.button:focus-visible {
     outline: 2px solid var(--accent);
@@ -147,131 +154,177 @@ button:focus-visible, a.button:focus-visible {
 button.secondary {
     color: var(--text);
     background: var(--card);
-    border-color: var(--border);
+    border-color: #cfd4dc;
 }
 button.secondary:hover {
     filter: none;
-    background: var(--soft);
+    background: var(--inset);
 }
 button.danger {
-    color: var(--red);
-    background: var(--card);
-    border-color: var(--border);
-}
-button.danger:hover {
-    filter: none;
-    background: var(--red-bg);
+    color: #fff;
+    background: #dc3545;
+    border-color: #dc3545;
 }
 button.small {
     padding: 4px 10px;
     font-size: 13px;
+    font-weight: 500;
 }
 .full {
     width: 100%;
 }
-.row {
+.actions {
     display: flex;
+    justify-content: center;
     gap: 8px;
     flex-wrap: wrap;
 }
-.row.end {
-    justify-content: flex-end;
-}
 
+/* Text */
 .muted {
     color: var(--muted);
-    font-size: 14px;
+    font-size: 13px;
+}
+.hint {
+    margin: 10px 0 0;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
 }
 .error {
+    margin: 0 0 12px;
+    padding: 10px 12px;
     color: var(--red);
     background: var(--red-bg);
-    padding: 10px 12px;
+    border: 1px solid var(--red-border);
     border-radius: 8px;
     font-size: 14px;
 }
-ol.steps {
-    margin: 0 0 16px;
+
+/* Status banner (like "Server is online") */
+.banner {
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--inset);
+    margin-bottom: 14px;
+}
+.banner b {
+    display: block;
+    font-size: 15px;
+}
+.banner span {
+    font-size: 13px;
+    opacity: 0.85;
+}
+.banner.active { color: var(--green); background: var(--green-bg); border-color: var(--green-border); }
+.banner.paused { color: var(--amber); background: var(--amber-bg); border-color: var(--amber-border); }
+.banner.stopped { color: var(--red); background: var(--red-bg); border-color: var(--red-border); }
+
+/* Inset list box (like "Lookup History") */
+.inset {
+    background: var(--inset);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    max-height: 340px;
+    overflow-y: auto;
+}
+.inset .item {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+}
+.inset .item:last-child {
+    border-bottom: 0;
+}
+.inset .item-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 14px;
+}
+.inset .item-sub {
+    margin-top: 2px;
+    font-size: 13px;
+    color: var(--muted);
+}
+.inset .empty {
+    padding: 18px 12px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+/* How it works: three steps */
+.steps3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 4px 0 14px;
+    text-align: center;
+}
+.steps3 div {
+    padding: 12px 6px;
+    background: var(--inset);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--muted);
+}
+.steps3 .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    margin-bottom: 4px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+}
+.steps3 b {
+    display: block;
+    color: var(--text);
+    font-size: 14px;
+}
+ol.setup {
+    margin: 0 0 14px;
     padding-left: 20px;
     color: var(--muted);
     font-size: 14px;
 }
-ol.steps li {
-    margin-bottom: 2px;
-}
 
-.pill {
+/* Status tags in the admin table */
+.tag {
     display: inline-block;
-    padding: 2px 10px;
-    border-radius: 999px;
-    font-size: 13px;
-    font-weight: 600;
-    background: var(--soft);
-    color: var(--muted);
-}
-.pill.active { background: var(--green-bg); color: var(--green); }
-.pill.paused { background: var(--amber-bg); color: var(--amber); }
-.pill.stopped, .pill.revoked { background: var(--red-bg); color: var(--red); }
-
-.stats {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin: 20px 0;
-}
-.stat .label {
+    padding: 1px 8px;
+    border-radius: 6px;
     font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--muted);
-}
-.stat .value {
     font-weight: 600;
-}
-.status-line {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-}
-
-.merges {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-.merges li {
-    padding: 12px 0;
-    border-top: 1px solid var(--border);
-}
-.merges li:first-child {
-    border-top: 0;
-    padding-top: 0;
-}
-.merges .head {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    font-size: 14px;
-}
-.merges .changes {
-    margin-top: 2px;
-    font-size: 14px;
+    border: 1px solid var(--border);
+    background: var(--inset);
     color: var(--muted);
 }
+.tag.active { color: var(--green); background: var(--green-bg); border-color: var(--green-border); }
+.tag.paused { color: var(--amber); background: var(--amber-bg); border-color: var(--amber-border); }
+.tag.stopped, .tag.revoked { color: var(--red); background: var(--red-bg); border-color: var(--red-border); }
 
 .code-box {
-    margin: 4px 0 16px;
-    padding: 14px;
-    font-size: 26px;
-    font-weight: 600;
+    margin: 0 0 14px;
+    padding: 12px;
+    font-size: 24px;
+    font-weight: 700;
     letter-spacing: 0.15em;
     text-align: center;
-    background: var(--soft);
+    color: var(--green);
+    background: var(--green-bg);
+    border: 1px solid var(--green-border);
     border-radius: 8px;
 }
-.table-scroll {
+.inset.table {
+    max-height: none;
     overflow-x: auto;
-    padding: 8px 12px;
 }
 table {
     width: 100%;
@@ -281,13 +334,12 @@ table {
 th {
     font-size: 12px;
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
     color: var(--muted);
+    background: var(--card);
 }
 th, td {
     text-align: left;
-    padding: 12px 10px;
+    padding: 10px 12px;
     border-bottom: 1px solid var(--border);
     vertical-align: middle;
 }
@@ -302,9 +354,9 @@ td form {
     gap: 6px;
     flex-wrap: wrap;
 }
-td .error {
+td .err {
     display: block;
     margin-top: 4px;
-    padding: 4px 8px;
     font-size: 12px;
+    color: var(--red);
 }
