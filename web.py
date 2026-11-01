@@ -4,6 +4,7 @@ Runs in a thread inside main.py on a local port; QuickRoute puts HTTPS in front 
 """
 
 import hmac
+import os
 import re
 import threading
 import time
@@ -106,6 +107,12 @@ def recent_merges(folder, count:int = 5) -> list[dict] | None:
     entries = [e for e in entries if e["outcome"] in ("merged", "unchanged", "superseded", "rejected")][-count:][::-1]
     recent_cache[folder["id"]] = (time.time(), entries)
     return entries
+
+
+@app.context_processor
+def static_version():
+    # Changes whenever style.css does, so browsers fetch the new one instead of a cached copy
+    return {"css_version": int(os.path.getmtime(os.path.join(app.static_folder, "style.css")))}
 
 
 @app.template_filter("ago")
