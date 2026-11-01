@@ -8,6 +8,7 @@ __pycache__/
 build/
 dist/
 .venv/
+run
 
 # OAuth client file and bot token: never commit
 secrets/
