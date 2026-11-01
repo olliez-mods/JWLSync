@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Protocol
 from urllib.parse import parse_qs, urlparse
 
-from storage import FOLDERS, HISTORY, SUBFOLDERS, USER, Entry
+from storage import FOLDERS, HISTORY, SUBFOLDERS, USER, Entry, LocalStorage
 
 FOLDER_MIME = "application/vnd.google-apps.folder"
 SCOPES = ["https://www.googleapis.com/auth/drive"]
@@ -255,3 +255,19 @@ def load_credentials(token_path: str | Path):
         creds.refresh(Request())
         Path(token_path).write_text(creds.to_json(), encoding="utf-8")
     return creds
+
+
+def open_storage(folder: str, token_path: str | Path, client_secret_path: str | Path):
+    """Storage for a Drive folder link, or a local folder (for testing). Logs in as the bot first
+    if there's no token yet."""
+    if not folder.startswith("https://"):
+        return LocalStorage(folder)
+    if not Path(token_path).exists():
+        print("No bot token yet, log in as the bot account in the browser")
+        authorize(client_secret_path, token_path)
+    return open_folder(GoogleDrive(load_credentials(token_path)), folder)
+
+
+def folder_key(folder: str) -> str:
+    """What makes a folder unique: the Drive folder id, or the full path of a local folder."""
+    return parse_folder_link(folder)[0] if folder.startswith("https://") else str(Path(folder).resolve())

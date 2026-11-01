@@ -15,3 +15,6 @@ secrets/
 # Local settings: folder links grant edit access
 config.ini
 config.ini.bak
+
+# App database (invites, folders)
+jwlsync.db*

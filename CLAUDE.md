@@ -85,13 +85,22 @@ Test data: `testdata/originals/` — read-only copies of the user's real backups
   README, CLI, tests). Usable outside JWLSync; the service will import it.
 - The service is flat at the root, like the user's other projects (keep it that way: no package,
   no `__main__`, no CLI args):
-  `main.py` — loads `config.ini` (quick_ini, created/updated from `config.ini.template`), sets up
-  and watches every folder in `folders` (a `|` list), logs in as the bot if the token is missing,
-  and keeps going after errors. Run: `python main.py`.
+  `main.py` — loads `config.ini` (quick_ini, created/updated from `config.ini.template`), then each
+  pass reads the active folders from the database, sets up new ones, merges, and records
+  last_check/last_merge/last_error per folder; logs in as the bot if the token is missing and keeps
+  going after errors. Run: `python main.py`.
+  `db.py` — SQLite (`jwlsync.db`, git-ignored), like MyServiceTimePy's sqlFunctions.py. Tables
+  `invites` (code `XXXXX-XXXXX` capitals, name, revoked) and `folders` (invite_id unique → one
+  folder per invite, link, folder_id unique, status active|paused|stopped, last_*). The invite code
+  is also the person's access key; it's a plain column so it can be regenerated. Per-folder merge
+  state stays in Drive (`User/state.json`), not here.
+  `admin.py` — menu prompts (no args): create invite, list, add folder (validates + sets up),
+  pause/resume/stop, regenerate code, revoke (stops the folder; unrevoking leaves it stopped).
   `storage.py`: `Storage` interface over the folders + `LocalStorage` (a directory on disk).
   `service.py`: `process(storage)` handles everything in `JW Library Save` as one batch.
   `drive.py`: `DriveStorage` on a link-shared Drive folder via a narrow `DriveClient` interface;
   `GoogleDrive` is the real adapter (Google libs imported lazily), `open_folder(client, link)` validates.
+  `open_storage(folder, token, client_secret)` and `folder_key(folder)` are shared by main/admin.
   quick_ini comments are `#`; a `#` in a value must be escaped as `\#`.
 - `requirements.txt` — Google libs, `quick_ini`, and `-e ./jwlkit`; `jwlkit` itself is stdlib-only.
 - `tests/` — service tests (simulated devices + replay of the real backups), Drive tests on an
