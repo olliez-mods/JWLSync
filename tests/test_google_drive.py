@@ -12,7 +12,7 @@ try:
 except ImportError:
     HttpMockSequence = None
 
-from jwlsync.drive import FOLDER_MIME, GoogleDrive
+from drive import FOLDER_MIME, GoogleDrive
 
 OK = {"status": "200"}
 META = {"id": "f1", "name": "x", "mimeType": "application/octet-stream", "parents": ["p"],

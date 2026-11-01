@@ -1,13 +1,13 @@
-# JWLSync settings. config.ini is created from this file on first run (git-ignored);
-# settings added here later are merged into it. Relative paths are relative to config.ini.
-
-[jwlsync]
-# Bot account token from: python -m jwlsync auth secrets/client_secret.json --token secrets/token.json
-token = secrets/token.json
-# watch: seconds between checks
-interval = 10
-# Seconds a file must be unchanged before it's merged (uploads can still be in progress)
-settle = 5
 # Folders to sync, one per "|" line: a Drive folder link (shared "Anyone with the link" as Editor)
-# or a local folder. Used when no folder is given on the command line.
-folders =
+# or a local folder
+folders=
+
+# Bot account login. If the token file doesn't exist, a browser opens to log in as the bot once
+client_secret_path=./secrets/client_secret.json
+token_path=./secrets/token.json
+
+# Seconds between checks
+interval=10
+
+# Seconds a file must be unchanged before it's merged (uploads can still be in progress)
+settle=5

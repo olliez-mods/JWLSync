@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Protocol
 from urllib.parse import parse_qs, urlparse
 
-from .storage import FOLDERS, HISTORY, SUBFOLDERS, USER, Entry
+from storage import FOLDERS, HISTORY, SUBFOLDERS, USER, Entry
 
 FOLDER_MIME = "application/vnd.google-apps.folder"
 SCOPES = ["https://www.googleapis.com/auth/drive"]

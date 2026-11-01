@@ -32,7 +32,7 @@ from pathlib import Path
 from jwlkit import BackupError, BaseMatch, Dataset, find_base, merge, open_backup, read, write_backup
 from jwlkit.model import TABLES
 
-from .storage import MERGED, SAVE, UPLOADS, Entry, Storage
+from storage import MERGED, SAVE, UPLOADS, Entry, Storage
 
 STATE = "state.json"
 LOG = "merge-log.txt"

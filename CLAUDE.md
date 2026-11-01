@@ -83,24 +83,23 @@ Test data: `testdata/originals/` — read-only copies of the user's real backups
 ## Layout
 - `jwlkit/` — the merge engine as a standalone, dependency-free Python package (own pyproject,
   README, CLI, tests). Usable outside JWLSync; the service will import it.
-- `jwlsync/` — the service. `storage.py`: `Storage` interface over the three folders +
-  `LocalStorage` (a directory on disk); the Drive layer will be a second implementation.
-  `service.py`: `process(storage)` merges every settled upload in `JW Library Save`.
+- The service is flat at the root, like the user's other projects (keep it that way: no package,
+  no `__main__`, no CLI args):
+  `main.py` — loads `config.ini` (quick_ini, created/updated from `config.ini.template`), sets up
+  and watches every folder in `folders` (a `|` list), logs in as the bot if the token is missing,
+  and keeps going after errors. Run: `python main.py`.
+  `storage.py`: `Storage` interface over the folders + `LocalStorage` (a directory on disk).
+  `service.py`: `process(storage)` handles everything in `JW Library Save` as one batch.
   `drive.py`: `DriveStorage` on a link-shared Drive folder via a narrow `DriveClient` interface;
   `GoogleDrive` is the real adapter (Google libs imported lazily), `open_folder(client, link)` validates.
-  CLI: `python -m jwlsync {setup,process,watch} [FOLDER|DRIVE_LINK] [--token T] [--config F]`,
-  `python -m jwlsync auth CLIENT_SECRETS --token T` (one-time bot login). Settings from
-  `config.ini` (git-ignored) via `quick_ini`, created/updated from `config.ini.template`
-  (`load_file(..., template=True)`): token, interval, settle, and `folders` as a `|` list — with
-  no FOLDER given, the command runs on all of them. quick_ini comments are `#`, and `#` in a value
-  must be escaped as `\#`.
-- `requirements.txt` — Google libs for the Drive adapter, `quick_ini` for the CLI config; `jwlkit` is stdlib-only.
+  quick_ini comments are `#`; a `#` in a value must be escaped as `\#`.
+- `requirements.txt` — Google libs, `quick_ini`, and `-e ./jwlkit`; `jwlkit` itself is stdlib-only.
 - `tests/` — service tests (simulated devices + replay of the real backups), Drive tests on an
   in-memory fake (`fake_drive.py`), and `test_google_drive.py`: the real adapter against
   googleapiclient's HttpMockSequence (skipped if the libs aren't installed). On this machine the
   MSYS2 python can't build `cryptography`; use the Windows python (`py -3.12`) in a venv for the libs.
-  Venv: `.venv` with `pip install -r requirements.txt` and `pip install -e jwlkit` (without the
-  editable install, running from the repo root imports the outer `jwlkit/` dir as an empty namespace package).
+  Venv: `.venv` with `pip install -r requirements.txt` (jwlkit must be installed: otherwise running
+  from the repo root imports the outer `jwlkit/` dir as an empty namespace package).
 - `docs/format-notes.md` — format + merge research.
 - `testdata/originals/` — the user's real backups, read-only. Personal data: never publish/commit.
 

@@ -7,8 +7,9 @@ from fake_drive import FakeDrive
 from helpers import base_dataset, loc, note
 
 from jwlkit import Dataset, open_backup, read, write_backup
-from jwlsync import HISTORY, MERGED, SAVE, UPLOADS, USER, process
-from jwlsync.drive import DriveError, DriveStorage, open_folder, parse_folder_link
+from service import process
+from storage import HISTORY, MERGED, SAVE, UPLOADS, USER
+from drive import DriveError, DriveStorage, open_folder, parse_folder_link
 
 ID = "1AbCdEfGhIjKlMnOpQrStUvWxYz012345"
 

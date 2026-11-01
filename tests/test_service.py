@@ -8,7 +8,8 @@ from pathlib import Path
 from helpers import base_dataset, clone, loc, note
 
 from jwlkit import Dataset, open_backup, read, write_backup
-from jwlsync import HISTORY, MERGED, SAVE, UPLOADS, USER, LocalStorage, process
+from service import process
+from storage import HISTORY, MERGED, SAVE, UPLOADS, USER, LocalStorage
 
 
 class Device:

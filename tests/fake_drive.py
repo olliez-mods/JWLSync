@@ -6,7 +6,7 @@ import itertools
 from datetime import datetime, timezone
 from pathlib import Path
 
-from jwlsync.drive import APP_PROPERTIES, FOLDER_MIME
+from drive import APP_PROPERTIES, FOLDER_MIME
 
 EDITABLE = {"canAddChildren": True, "canEdit": True}
 
