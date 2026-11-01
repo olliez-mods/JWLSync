@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>JWLSync</h1>
+<p class="tagline">Keep JW Library the same on all your devices</p>
+
+<div class="card">
+    <p>JW Library can only back up and restore. JWLSync watches a Google Drive folder, merges the
+    backups from all your devices (notes, highlights, tags, bookmarks) and leaves one up to date
+    backup any device can restore.</p>
+    <p><b>How to use it:</b> back up into your folder's <i>JW Library Save</i> folder, wait a few
+    seconds for the merge, then restore from the file there.</p>
+    <p class="muted">Restoring replaces what's on the device, so always back up first.</p>
+</div>
+
+<div class="card">
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+    {% if folder %}
+        <p>You're signed in.</p>
+        <a class="button" href="{{ url_for('me') }}">Go to your page</a>
+    {% elif invite %}
+        <p>Code accepted. Now set up your folder:</p>
+        <ol class="muted">
+            <li>Create a folder in Google Drive</li>
+            <li>Share it: <i>General access → Anyone with the link → Editor</i></li>
+            <li>Copy the link and paste it here</li>
+        </ol>
+        <form class="stack" method="post" action="{{ url_for('add_folder') }}">
+            <input name="link" value="{{ link or '' }}" placeholder="https://drive.google.com/drive/folders/..." required autofocus>
+            <button>Start syncing</button>
+        </form>
+    {% else %}
+        <form class="stack" method="post" action="{{ url_for('enter_code') }}">
+            <input class="code" name="code" placeholder="XXXXX-XXXXX" maxlength="11" autocomplete="off" required autofocus>
+            <button>Continue</button>
+        </form>
+        <p class="muted">JWLSync is invite only. Have a code? Enter it above.</p>
+    {% endif %}
+</div>
+{% endblock %}

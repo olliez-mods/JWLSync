@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Your folder · JWLSync{% endblock %}
+{% block content %}
+<h1>JWLSync</h1>
+<p class="tagline">{{ invite["name"] }}'s folder</p>
+
+<div class="card">
+    <p>Status: <span class="status {{ folder['status'] }}">{{ folder["status"]|capitalize }}</span></p>
+    <p class="muted">
+        Last checked {{ folder["last_check"]|ago }} · last merge {{ folder["last_merge"]|ago }}<br>
+        <a href="{{ folder['link'] }}" target="_blank" rel="noopener">Open your Drive folder</a>
+    </p>
+    {% if folder["last_error"] %}<p class="error">Last check failed: {{ folder["last_error"] }}</p>{% endif %}
+
+    <form class="row" method="post" action="{{ url_for('me_status') }}">
+        {% if folder["status"] == "active" %}
+            <button name="action" value="pause" class="secondary">Pause</button>
+        {% else %}
+            <button name="action" value="resume">Resume syncing</button>
+        {% endif %}
+        {% if folder["status"] != "stopped" %}
+            <button name="action" value="stop" class="danger"
+                    onclick="return confirm('Stop syncing? Your files stay in Drive, and you can resume later.')">Stop syncing</button>
+        {% endif %}
+    </form>
+</div>
+
+<div class="card">
+    <b>Recent merges</b>
+    {% if recent is none %}
+        <p class="muted">Couldn't read your merge log right now.</p>
+    {% elif not recent %}
+        <p class="muted">Nothing merged yet. Back up from a device into <i>JW Library Save</i>.</p>
+    {% else %}
+        {% for entry in recent %}<pre>{{ entry }}</pre>{% endfor %}
+    {% endif %}
+</div>
+
+<form method="post" action="{{ url_for('logout') }}">
+    <button class="secondary">Sign out</button>
+</form>
+{% endblock %}

@@ -96,6 +96,14 @@ Test data: `testdata/originals/` — read-only copies of the user's real backups
   state stays in Drive (`User/state.json`), not here.
   `admin.py` — menu prompts (no args): create invite, list, add folder (validates + sets up),
   pause/resume/stop, regenerate code, revoke (stops the folder; unrevoking leaves it stopped).
+  `web.py` — Flask, started in a thread by main.py on `web_host:web_port` (127.0.0.1:5080), behind
+  QuickRoute (jwlsync.antinoid.com → HTTPS; ProxyFix for real IPs). Server-rendered templates in
+  `templates/`, one stylesheet `static/style.css`, almost no JS. Pages: `/` explainer + invite code
+  box → Drive link box (Drive links only, never local paths) → `/me` status, recent merge-log
+  entries (read from Drive, cached 30 s), pause/resume/stop; `/admin` (login with `admin_code`,
+  off when empty) create invites, table of everyone, same actions as admin.py. Session cookie holds
+  the code (regenerate/revoke logs them out); 10 wrong codes per IP per 10 min → 429.
+  `secret_key` is generated into config.ini on first run; `secure_cookie=false` to test over http.
   `storage.py`: `Storage` interface over the folders + `LocalStorage` (a directory on disk).
   `service.py`: `process(storage)` handles everything in `JW Library Save` as one batch.
   `drive.py`: `DriveStorage` on a link-shared Drive folder via a narrow `DriveClient` interface;

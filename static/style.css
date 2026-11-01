@@ -1,0 +1,130 @@
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: #f4f5f7;
+    color: #222;
+    line-height: 1.5;
+}
+main {
+    max-width: 520px;
+    margin: 40px auto;
+    padding: 0 16px;
+}
+main.wide {
+    max-width: 1000px;
+}
+h1 {
+    text-align: center;
+    margin-bottom: 4px;
+}
+.tagline {
+    text-align: center;
+    color: #666;
+    margin-top: 0;
+}
+.card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.card > :first-child {
+    margin-top: 0;
+}
+.card > :last-child {
+    margin-bottom: 0;
+}
+form.stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+}
+input.code {
+    text-align: center;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+button, a.button {
+    display: inline-block;
+    text-decoration: none;
+    padding: 10px 16px;
+    font-size: 15px;
+    border: 0;
+    border-radius: 8px;
+    background: #3b6fd8;
+    color: #fff;
+    cursor: pointer;
+}
+button:hover, a.button:hover {
+    filter: brightness(0.92);
+}
+button.secondary {
+    background: #e4e7ec;
+    color: #222;
+}
+button.danger {
+    background: #d9534f;
+}
+button.small {
+    padding: 4px 10px;
+    font-size: 13px;
+}
+.row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.error {
+    color: #b42318;
+}
+.muted {
+    color: #666;
+    font-size: 14px;
+}
+.status {
+    font-weight: 600;
+}
+.status.active { color: #1a7f37; }
+.status.paused { color: #b26a00; }
+.status.stopped, .status.revoked { color: #b42318; }
+pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 13px;
+    background: #f4f5f7;
+    padding: 8px 10px;
+    border-radius: 6px;
+    margin: 8px 0;
+}
+.code-box {
+    font-size: 24px;
+    letter-spacing: 3px;
+    text-align: center;
+    font-weight: 600;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+th, td {
+    text-align: left;
+    padding: 8px 6px;
+    border-bottom: 1px solid #eee;
+    vertical-align: top;
+}
+td form {
+    display: inline;
+}
+.table-scroll {
+    overflow-x: auto;
+}

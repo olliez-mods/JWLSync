@@ -10,3 +10,16 @@ interval=10
 
 # Seconds a file must be unchanged before it's merged (uploads can still be in progress)
 settle=5
+
+# Website (QuickRoute puts HTTPS in front of it)
+web_host=127.0.0.1
+web_port=5080
+
+# Code for the /admin page; leave empty to turn the admin page off
+admin_code=
+
+# Signs the login cookies; made automatically on first run. Changing it signs everyone out
+secret_key=
+
+# Only send login cookies over https; set to false to test over plain http
+secure_cookie=true

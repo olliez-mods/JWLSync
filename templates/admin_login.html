@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Admin · JWLSync{% endblock %}
+{% block content %}
+<h1>JWLSync admin</h1>
+<div class="card">
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    <form class="stack" method="post" action="{{ url_for('admin_login') }}">
+        <input type="password" name="admin_code" placeholder="Admin code" required autofocus>
+        <button>Sign in</button>
+    </form>
+</div>
+{% endblock %}

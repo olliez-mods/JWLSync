@@ -1,9 +1,11 @@
+import secrets
 import time
 import traceback
 
 from quick_ini import QuickIni
 
 import db
+import web
 from drive import open_storage
 from service import process
 
@@ -15,10 +17,21 @@ client_secret_path = QuickIni.get_value("client_secret_path", "./secrets/client_
 token_path = QuickIni.get_value("token_path", "./secrets/token.json")
 interval = QuickIni.get_value("interval", 10, (int, float))
 settle = QuickIni.get_value("settle", 5, (int, float))
+web_host = QuickIni.get_value("web_host", "127.0.0.1")
+web_port = QuickIni.get_value("web_port", 5080, int)
+secure_cookie = QuickIni.get_value("secure_cookie", True, bool)
+admin_code = str(QuickIni.get_value("admin_code") or "")
+secret_key = QuickIni.get_value("secret_key")
+if(not secret_key):
+    # Made once and saved, so logins survive restarts
+    secret_key = QuickIni.write_value("secret_key", secrets.token_urlsafe(32), add_if_not_found=True)
 # ======================================================================
 
 db.set_db(db_path)
 db.setup_db()
+
+web.configure(str(secret_key), admin_code, token_path, client_secret_path, secure_cookie)
+web.start(web_host, web_port)
 
 # Folders are read from the database every pass, so ones added, paused or stopped (admin.py,
 # the website) take effect without a restart
