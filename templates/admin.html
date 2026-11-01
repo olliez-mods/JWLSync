@@ -1,36 +1,35 @@
 {% extends "base.html" %}
 {% block title %}Admin · JWLSync{% endblock %}
 {% block main_class %}wide{% endblock %}
+{% block subheading %}<p>Admin</p>{% endblock %}
 {% block content %}
-<h1>JWLSync admin</h1>
-
 <div class="card">
     {% if error %}<p class="error">{{ error }}</p>{% endif %}
     {% if new_code %}
-        <p>Code for {{ new_name }}:</p>
-        <p class="code-box">{{ new_code }}</p>
+        <p class="muted">Code for {{ new_name }}:</p>
+        <div class="code-box">{{ new_code }}</div>
     {% endif %}
     <form class="row" method="post" action="{{ url_for('admin_invite') }}">
-        <input name="name" placeholder="Name (who it's for)" style="flex: 1" required>
+        <input name="name" placeholder="Name (who it's for)" aria-label="Name" style="flex: 1; min-width: 180px" required>
         <button>Create invite</button>
     </form>
 </div>
 
 <div class="card table-scroll">
     <table>
-        <tr><th>Name</th><th>Code</th><th>Status</th><th>Last check</th><th>Last merge</th><th>Actions</th></tr>
+        <tr><th>Name</th><th>Code</th><th>Status</th><th>Last check</th><th>Last merge</th><th></th></tr>
         {% for r in invites %}
         {% set state = "revoked" if r["revoked"] else (r["status"] or "no folder") %}
         <tr>
-            <td>{{ r["name"] }}
-                {% if r["link"] %}<br><a class="muted" href="{{ r['link'] }}" target="_blank" rel="noopener">folder</a>{% endif %}
+            <td><b>{{ r["name"] }}</b>
+                {% if r["link"] %}<br><a class="muted" href="{{ r['link'] }}" target="_blank" rel="noopener">Drive folder ↗</a>{% endif %}
             </td>
             <td><code>{{ r["code"] }}</code></td>
-            <td><span class="status {{ state }}">{{ state|capitalize }}</span>
-                {% if r["last_error"] %}<br><span class="error">{{ r["last_error"] }}</span>{% endif %}
+            <td><span class="pill {{ state }}">{{ state|capitalize }}</span>
+                {% if r["last_error"] %}<span class="error">{{ r["last_error"] }}</span>{% endif %}
             </td>
-            <td>{{ r["last_check"]|ago if r["link"] else "" }}</td>
-            <td>{{ r["last_merge"]|ago if r["link"] else "" }}</td>
+            <td class="muted">{{ r["last_check"]|ago if r["link"] else "" }}</td>
+            <td class="muted">{{ r["last_merge"]|ago if r["link"] else "" }}</td>
             <td>
                 <form method="post" action="{{ url_for('admin_action') }}">
                     <input type="hidden" name="invite_id" value="{{ r['id'] }}">
@@ -38,7 +37,7 @@
                         {% if r["status"] == "active" %}
                             <button class="small secondary" name="action" value="pause">Pause</button>
                         {% else %}
-                            <button class="small" name="action" value="resume">Resume</button>
+                            <button class="small secondary" name="action" value="resume">Resume</button>
                         {% endif %}
                         {% if r["status"] != "stopped" %}
                             <button class="small secondary" name="action" value="stop">Stop</button>
@@ -61,7 +60,7 @@
     </table>
 </div>
 
-<form method="post" action="{{ url_for('admin_logout') }}">
-    <button class="secondary">Sign out</button>
+<form class="row end" method="post" action="{{ url_for('admin_logout') }}">
+    <button class="secondary small">Sign out</button>
 </form>
 {% endblock %}

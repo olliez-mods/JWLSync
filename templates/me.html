@@ -1,15 +1,18 @@
 {% extends "base.html" %}
 {% block title %}Your folder · JWLSync{% endblock %}
+{% block subheading %}<p>{{ invite["name"] }}'s folder</p>{% endblock %}
 {% block content %}
-<h1>JWLSync</h1>
-<p class="tagline">{{ invite["name"] }}'s folder</p>
-
 <div class="card">
-    <p>Status: <span class="status {{ folder['status'] }}">{{ folder["status"]|capitalize }}</span></p>
-    <p class="muted">
-        Last checked {{ folder["last_check"]|ago }} · last merge {{ folder["last_merge"]|ago }}<br>
-        <a href="{{ folder['link'] }}" target="_blank" rel="noopener">Open your Drive folder</a>
-    </p>
+    <div class="status-line">
+        <span class="pill {{ folder['status'] }}">{{ folder["status"]|capitalize }}</span>
+        <a class="muted" href="{{ folder['link'] }}" target="_blank" rel="noopener">Open Drive folder ↗</a>
+    </div>
+
+    <div class="stats">
+        <div class="stat"><div class="label">Last checked</div><div class="value">{{ folder["last_check"]|ago }}</div></div>
+        <div class="stat"><div class="label">Last merge</div><div class="value">{{ folder["last_merge"]|ago }}</div></div>
+    </div>
+
     {% if folder["last_error"] %}<p class="error">Last check failed: {{ folder["last_error"] }}</p>{% endif %}
 
     <form class="row" method="post" action="{{ url_for('me_status') }}">
@@ -26,17 +29,27 @@
 </div>
 
 <div class="card">
-    <b>Recent merges</b>
+    <h2>Recent merges</h2>
     {% if recent is none %}
         <p class="muted">Couldn't read your merge log right now.</p>
     {% elif not recent %}
-        <p class="muted">Nothing merged yet. Back up from a device into <i>JW Library Save</i>.</p>
+        <p class="muted">Nothing yet. Back up from a device into <i>JW Library Save</i>.</p>
     {% else %}
-        {% for entry in recent %}<pre>{{ entry }}</pre>{% endfor %}
+        <ul class="merges">
+        {% for m in recent %}
+            <li>
+                <div class="head">
+                    <span><b>{{ m.device }}</b> · {{ m.outcome }}</span>
+                    <span class="muted">{{ m.when|ago }}</span>
+                </div>
+                {% if m.changes %}<div class="changes">{{ m.changes|join(" · ") }}</div>{% endif %}
+            </li>
+        {% endfor %}
+        </ul>
     {% endif %}
 </div>
 
-<form method="post" action="{{ url_for('logout') }}">
-    <button class="secondary">Sign out</button>
+<form class="row end" method="post" action="{{ url_for('logout') }}">
+    <button class="secondary small">Sign out</button>
 </form>
 {% endblock %}

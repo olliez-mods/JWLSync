@@ -4,6 +4,7 @@ Runs in a thread inside main.py on a local port; QuickRoute puts HTTPS in front 
 """
 
 import hmac
+import re
 import threading
 import time
 from datetime import datetime, timezone
@@ -65,10 +66,32 @@ def current_invite():
     return invite
 
 
+LOG_HEADER = re.compile(r"^(\S+ \S+)Z\s+(.*) \((.*)\)\s+(\w+)$")
+LOG_CHANGE = re.compile(r"^(\w+)\s+\+(\d+) -(\d+) ~(\d+)")
+FRIENDLY = {"usermarks": "Highlights", "tagmaps": "Tagged items", "inputfields": "Input fields"}
+
+def parse_entry(text:str) -> dict:
+    """A merge-log entry as {when, device, outcome, changes} for the user page."""
+    lines = [l.strip() for l in text.splitlines()]
+    m = LOG_HEADER.match(lines[0])
+    if not m:
+        return {"when": None, "device": lines[0], "outcome": "", "changes": lines[1:]}
+    when = datetime.strptime(m[1], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc).isoformat()
+    changes = []
+    for line in lines[1:]:
+        c = LOG_CHANGE.match(line)
+        if c:
+            counts = [f"{sign}{n}" for sign, n in (("+", c[2]), ("−", c[3]), ("~", c[4])) if n != "0"]
+            changes.append(f"{FRIENDLY.get(c[1], c[1].capitalize())} {' '.join(counts)}")
+        elif not line.startswith(("base:", "wrote:")) and line != "no changes":
+            changes.append(line)
+    return {"when": when, "device": m[3].replace("_", " "), "outcome": m[4], "changes": changes}
+
+
 recent_cache = {}  # folder row id -> (time, entries); keeps page loads from hitting Drive every time
 RECENT_SECONDS = 30
 
-def recent_merges(folder, count:int = 5) -> list[str] | None:
+def recent_merges(folder, count:int = 5) -> list[dict] | None:
     """The last few merge-log entries from the folder's User/merge-log.txt, newest first."""
     cached = recent_cache.get(folder["id"])
     if cached and time.time() - cached[0] < RECENT_SECONDS:
@@ -78,7 +101,9 @@ def recent_merges(folder, count:int = 5) -> list[str] | None:
         text = storage.read_text("merge-log.txt") or ""
     except Exception:
         return None
-    entries = [e.strip() for e in text.split("\n\n") if e.strip()][-count:][::-1]
+    # Only what happened to their backups; leftovers and notes are housekeeping
+    entries = [parse_entry(e.strip()) for e in text.split("\n\n") if e.strip()]
+    entries = [e for e in entries if e["outcome"] in ("merged", "unchanged", "superseded", "rejected")][-count:][::-1]
     recent_cache[folder["id"]] = (time.time(), entries)
     return entries
 
