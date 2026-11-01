@@ -8,7 +8,7 @@ from pathlib import Path
 from helpers import base_dataset, clone, loc, note
 
 from jwlkit import Dataset, open_backup, read, write_backup
-from jwlsync import HISTORY, SAVE, USER, LocalStorage, process
+from jwlsync import HISTORY, MERGED, SAVE, UPLOADS, USER, LocalStorage, process
 
 
 class Device:
@@ -65,7 +65,7 @@ class Service(unittest.TestCase):
         out = merged(self.root)
         self.assertEqual(out.notes, base_dataset().notes)
         self.assertEqual(out.stamp["merge_id"], state(self.root)["current"])
-        self.assertEqual(len(list((self.root / HISTORY).iterdir())), 1)
+        self.assertEqual(len(list((self.root / UPLOADS).iterdir())), 1)
         self.assertEqual(self.run_once(), [])
 
     def test_deletion_applies_without_touching_other_devices_work(self):
@@ -129,7 +129,7 @@ class Service(unittest.TestCase):
         self.assertEqual([r.outcome for r in results], ["merged", "merged"])
         self.assertEqual(len(self.saves()), 1)
         self.assertIn("p1", merged(self.root).notes)
-        self.assertEqual(state(self.root)["seq"], 2)
+        self.assertEqual(state(self.root)["seq"], 1)  # one merged file per batch
 
     def test_unreadable_file_is_rejected_and_kept(self):
         Device(self.root, "PC", base_dataset()).backup()
@@ -137,7 +137,7 @@ class Service(unittest.TestCase):
         (self.root / SAVE / "broken.jwlibrary").write_bytes(b"not a zip")
         [r] = self.run_once()
         self.assertEqual(r.outcome, "rejected")
-        self.assertTrue(any("rejected broken" in p.name for p in (self.root / HISTORY).iterdir()))
+        self.assertTrue(any("rejected broken" in p.name for p in (self.root / UPLOADS).iterdir()))
         self.assertEqual(len(self.saves()), 1)
 
     def test_files_still_changing_wait(self):
@@ -151,9 +151,8 @@ class Service(unittest.TestCase):
         pc.ds.notes["n9"] = note(self.g1, "more")
         pc.backup()
         self.run_once()
-        history = {p.name for p in (self.root / HISTORY).iterdir()}
-        self.assertIn(first.merged, history)
-        self.assertEqual(sum("UserdataBackup_PC" in n for n in history), 2)
+        self.assertIn(first.merged, {p.name for p in (self.root / MERGED).iterdir()})
+        self.assertEqual(sum("UserdataBackup_PC" in p.name for p in (self.root / UPLOADS).iterdir()), 2)
         log = (self.root / USER / "merge-log.txt").read_text(encoding="utf-8")
         self.assertEqual(log.count("UserdataBackup_PC"), 2)
 

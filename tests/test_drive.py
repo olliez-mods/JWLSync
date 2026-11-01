@@ -7,7 +7,7 @@ from fake_drive import FakeDrive
 from helpers import base_dataset, loc, note
 
 from jwlkit import Dataset, open_backup, read, write_backup
-from jwlsync import HISTORY, SAVE, USER, process
+from jwlsync import HISTORY, MERGED, SAVE, UPLOADS, USER, process
 from jwlsync.drive import DriveError, DriveStorage, open_folder, parse_folder_link
 
 ID = "1AbCdEfGhIjKlMnOpQrStUvWxYz012345"
@@ -120,7 +120,7 @@ class ServiceOnDrive(unittest.TestCase):
     def backup(self, ds: Dataset, name: str) -> None:
         path = Path(self.tmp.name) / name
         write_backup(ds, path, device_name=name)
-        self.drive.upload(self.storage._folder(SAVE), path, name)
+        self.drive.add(name, self.storage._folder(SAVE), path.read_bytes())  # untagged, like a device upload
 
     def restore(self) -> Dataset:
         state = json.loads(self.storage.read_text("state.json"))
@@ -145,7 +145,8 @@ class ServiceOnDrive(unittest.TestCase):
         self.assertNotIn("n2", out.notes)
         self.assertIn("from-phone", out.notes)
         self.assertEqual(len(self.storage.list(SAVE)), 1)
-        self.assertEqual(len(self.storage.list(HISTORY)), 5)  # 3 uploads + 2 earlier merged files
+        self.assertEqual(len(self.storage.list(UPLOADS)), 3)
+        self.assertEqual(len(self.storage.list(MERGED)), 2)
         self.assertIn("pc2.jwlibrary", self.storage.read_text("merge-log.txt"))
 
 

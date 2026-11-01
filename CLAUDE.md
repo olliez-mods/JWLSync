@@ -11,7 +11,8 @@ that any device can restore from.
    the link into the JWLSync web page. That's the whole setup.
 2. JWLSync sets the folder up with three subfolders:
    - `JW Library Save` — where devices save backups to and restore from. Contains the current merged file.
-   - `History` — every raw upload and every previous merged file.
+   - `History` — `Merged/` (every previous merged file; needed as bases) and `Uploads/` (every raw
+     upload, incl. rejected ones; recovery only). Separate so they can get different retention.
    - `User` — per-user files (merge log, "what changed" reports, config).
    Existing contents are **not deleted** — they get moved into `History` (or setup requires an empty folder).
 3. User backs up from any device (phone, PC, tablet) into `JW Library Save`.
@@ -94,6 +95,8 @@ Test data: `testdata/originals/` — read-only copies of the user's real backups
   in-memory fake (`fake_drive.py`), and `test_google_drive.py`: the real adapter against
   googleapiclient's HttpMockSequence (skipped if the libs aren't installed). On this machine the
   MSYS2 python can't build `cryptography`; use the Windows python (`py -3.12`) in a venv for the libs.
+  Venv: `.venv` with `pip install -r requirements.txt` and `pip install -e jwlkit` (without the
+  editable install, running from the repo root imports the outer `jwlkit/` dir as an empty namespace package).
 - `docs/format-notes.md` — format + merge research.
 - `testdata/originals/` — the user's real backups, read-only. Personal data: never publish/commit.
 
@@ -109,19 +112,26 @@ text. So every merged file gets an extra `JWLSync(Key, Value)` table (merge_id, 
 source, base) and the device's next backup carries it back. Base = stamp → else content match
 (≥98% of a recent merged file's entries present, `jwlkit.base`) → else none (union, no deletes).
 App state in `User/state.json` (current merge id, merge id → file id), log in `User/merge-log.txt`.
-Unverified: that the extra table survives restore + backup on each platform (esp. Android, and
-app schema upgrades) — check alongside the device restore test.
+Verified on Android, iPad and Windows PC (2026-11-01): the table survives restore + backup and the
+next upload matched by stamp. Unverified across app schema upgrades.
 
 ## Status
 - [x] 1. Merge engine (`jwlkit`) — 40 tests pass, all 20 real backups round-trip identically.
       Real 3-way check: PC upload vs the merge it restored applied exactly its 13 changes.
       Tag/playlist renames detected by item overlap and carried across devices (2026-10-31).
       Base detection via stamp + content fallback (2026-10-31).
-      Not yet done: restoring a jwlkit-written file on real devices (Android/iOS/Windows).
+      Content match skips candidates written after the upload last changed (a stale iPad backup
+      matched a newer merge and deleted a newer note, 2026-10-31).
+      Restoring a jwlkit-written file works on Android, iPad and Windows (2026-11-01).
 - [x] 1b. Service core (`jwlsync`) on local storage — 11 tests pass incl. real-backup replay (2026-10-31).
-- [~] 2. Drive layer — `DriveStorage` + `GoogleDrive` adapter built and tested against a fake and
-      HTTP mocks (2026-10-31). Not yet run against real Drive: waiting on the bot account +
-      Cloud project (Drive API on, consent screen "In production", Desktop OAuth client).
+      Batch processing (2026-11-01): each run handles all of `JW Library Save` and leaves only the
+      current merged file. Own files (Drive tag or manifest device "JWLSync") → History/Merged;
+      non-backups → rejected; same device + same stamp → only the newest merges (older = superseded);
+      the rest merge in data-time order into one new merged file per batch.
+- [x] 2. Drive layer — `DriveStorage` + `GoogleDrive` adapter, tested against a fake and HTTP mocks,
+      and run on real Drive (2026-10-31): bot jwlsync@gmail.com, token in `secrets/token.json`,
+      setup + process work on a link-shared test folder. Consent screen is In production
+      (homepage/privacy on a github.io page). Moved files keep their owner (raw uploads stay the user's).
 - [ ] 3. Change detection
 - [ ] 4. Setup page
 

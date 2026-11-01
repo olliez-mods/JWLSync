@@ -15,8 +15,9 @@ from .storage import LocalStorage
 
 def _print(results) -> None:
     for r in results:
-        base = f"{r.base.method}:{r.base.merge_id}" if r.base else "none"
-        print(f"{r.upload}: {r.outcome} (base {base})" + (f" -> {r.merged}" if r.merged else ""))
+        base = f" (base {r.base.method}:{r.base.merge_id})" if r.base else (
+            " (base none)" if r.outcome in ("merged", "unchanged") else "")
+        print(f"{r.upload}: {r.outcome}{base}" + (f" -> {r.merged}" if r.merged else ""))
         for line in r.summary.splitlines():
             print(f"    {line}")
 

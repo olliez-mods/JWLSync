@@ -1,17 +1,21 @@
 """Turning uploads into merged files.
 
-`process(storage)` handles every new backup in the user's `JW Library Save` folder, oldest first:
+`process(storage)` handles everything in the user's `JW Library Save` folder as one batch, leaving
+only the current merged file there:
 
-1. Find the base: the merged file the uploading device last restored (stamp first, then content,
-   see jwlkit.base). No base means a device seen for the first time; nothing is deleted.
-2. 3-way merge the upload into the current merged file.
-3. Write the result into `JW Library Save` as a new merged file, stamped with a fresh merge id,
-   then move the previous merged file and the upload into `History`.
+1. Files JWLSync wrote itself (left by an interrupted run) go to `History/Merged`; anything that
+   isn't a readable backup goes to `History/Uploads` as rejected.
+2. Of several uploads from one device carrying the same stamp, only the newest counts: the older
+   ones are earlier states of that device (anything missing from the newer one was deleted there)
+   and go to `History/Uploads` as superseded.
+3. The rest are merged into the current merged file in the order their data last changed, each
+   against its own base: the merged file its device last restored (stamp first, then content, see
+   jwlkit.base). No base means nothing is deleted.
+4. If anything changed, one new merged file is written, stamped with a fresh merge id; the previous
+   one moves to `History/Merged` and the uploads to `History/Uploads`.
 
-An upload that changes nothing is just moved to History. A file that isn't a readable backup is
-moved to History with a "rejected" prefix. Every outcome is appended to `User/merge-log.txt`.
-
-State lives in `User/state.json`: the current merge id and, per merge id, where its file is now.
+Every outcome is appended to `User/merge-log.txt`. State lives in `User/state.json`: the current
+merge id and, per merge id, where its file is now.
 """
 
 from __future__ import annotations
@@ -28,11 +32,12 @@ from pathlib import Path
 from jwlkit import BackupError, BaseMatch, Dataset, find_base, merge, open_backup, read, write_backup
 from jwlkit.model import TABLES
 
-from .storage import HISTORY, SAVE, Entry, Storage
+from .storage import MERGED, SAVE, UPLOADS, Entry, Storage
 
 STATE = "state.json"
 LOG = "merge-log.txt"
 EXTENSION = ".jwlibrary"
+WRITER = "JWLSync"  # device name in the manifest of files we write
 # Recent merged files compared by content when an upload carries no known stamp.
 CONTENT_CANDIDATES = 10
 
@@ -41,7 +46,7 @@ CONTENT_CANDIDATES = 10
 class Result:
     upload: str
     device: str
-    outcome: str                  # "merged", "unchanged" or "rejected"
+    outcome: str                  # "merged", "unchanged", "superseded", "rejected" or "leftover"
     base: BaseMatch | None = None
     merged: str | None = None     # name of the new merged file
     summary: str = ""
@@ -109,66 +114,124 @@ def _find_base(upload: Dataset, state: dict, files: _Files) -> tuple[BaseMatch |
     return (match, candidates[match.merge_id]) if match else (None, None)
 
 
-def _process_one(storage: Storage, entry: Entry, state: dict, files: _Files, now: datetime) -> Result:
-    stamp = f"{now:%Y-%m-%d %H.%M.%S}"
-    try:
-        backup = files.open(entry.id)
-        upload = read(backup)
-    except (BackupError, OSError, ValueError) as e:
-        storage.move(entry.id, HISTORY, f"{stamp} rejected {entry.name}")
-        return Result(entry.name, "", "rejected", summary=str(e))
+@dataclass
+class _Upload:
+    entry: Entry
+    device: str
+    ds: Dataset
 
-    current = state["current"]
-    master = files.dataset(state["merges"][current]["id"]) if current else Dataset()
-    match, base = _find_base(upload, state, files)
-    merged, report = merge(master, upload, base)
-    result = Result(entry.name, backup.device_name, "merged", match, summary=report.summary())
+    @property
+    def order(self) -> tuple[float, float]:
+        changed = self.ds.last_modified.timestamp() if self.ds.last_modified else self.entry.modified
+        return changed, self.entry.modified
 
-    if current and _same_content(merged, master):
-        result.outcome = "unchanged"
-        storage.move(entry.id, HISTORY, f"{stamp} {entry.name}")
-        return result
+    @property
+    def stamp_id(self) -> str | None:
+        return self.ds.stamp.get("merge_id") or None
 
-    state["seq"] += 1
-    merge_id = uuid.uuid4().hex[:12]
-    merged.stamp = {"merge_id": merge_id, "seq": str(state["seq"]), "created": now.isoformat(timespec="seconds"),
-                    "source": entry.name, "base": match.merge_id if match else ""}
-    name = f"JWLSync {stamp}{EXTENSION}"
-    out = files.dir / f"out-{merge_id}{EXTENSION}"
-    write_backup(merged, out)
-    written = storage.upload(SAVE, out, name)
-    state["merges"][merge_id] = {"id": written.id, "seq": state["seq"], "source": entry.name}
-    state["current"] = merge_id
-    _save_state(storage, state)
-    files.cache[written.id] = merged
 
-    if current:
-        old = state["merges"][current]
-        moved = storage.move(old["id"], HISTORY)
-        files.cache[moved.id] = files.cache.pop(old["id"], master)
-        old["id"] = moved.id
-    storage.move(entry.id, HISTORY, f"{stamp} {entry.name}")
-    result.merged = written.name
-    return result
+def _open_uploads(storage: Storage, entries: list[Entry], files: _Files, stamp: str,
+                  results: list[Result]) -> list[_Upload]:
+    """Readable device backups among entries, oldest data first; everything else is moved out."""
+    uploads = []
+    for e in entries:
+        if e.ours:
+            storage.move(e.id, MERGED)
+            results.append(Result(e.name, WRITER, "leftover", summary="written by an interrupted run"))
+            continue
+        try:
+            if not e.name.lower().endswith(EXTENSION):
+                raise ValueError(f"not a {EXTENSION} file")
+            backup = files.open(e.id)
+            u = _Upload(e, backup.device_name, read(backup))
+        except (BackupError, OSError, ValueError) as err:
+            storage.move(e.id, UPLOADS, f"{stamp} rejected {e.name}")
+            results.append(Result(e.name, "", "rejected", summary=str(err)))
+            continue
+        if u.device == WRITER:
+            storage.move(e.id, MERGED)
+            results.append(Result(e.name, WRITER, "leftover", summary="written by JWLSync"))
+            continue
+        uploads.append(u)
+    return sorted(uploads, key=lambda u: u.order)
+
+
+def _drop_superseded(storage: Storage, uploads: list[_Upload], state: dict, stamp: str,
+                     results: list[Result]) -> list[_Upload]:
+    newest = {(u.device, u.stamp_id): u for u in uploads if u.stamp_id in state["merges"]}
+    keep = []
+    for u in uploads:
+        latest = newest.get((u.device, u.stamp_id))
+        if latest and latest is not u:
+            storage.move(u.entry.id, UPLOADS, f"{stamp} superseded {u.entry.name}")
+            results.append(Result(u.entry.name, u.device, "superseded",
+                                  summary=f"replaced by the newer {latest.entry.name} from the same device"))
+        else:
+            keep.append(u)
+    return keep
 
 
 def process(storage: Storage, settle: float = 5.0, clock=time.time) -> list[Result]:
-    """Merge every backup in JW Library Save that hasn't changed for `settle` seconds."""
+    """Merge every file in JW Library Save that hasn't changed for `settle` seconds."""
     state = _load_state(storage)
-    current_file = state["merges"].get(state["current"], {}).get("id")
-    known = {m["id"] for m in state["merges"].values()}
-    uploads = [e for e in storage.list(SAVE)
-               if e.name.lower().endswith(EXTENSION) and e.id != current_file and e.id not in known
-               and clock() - e.modified >= settle]
-    results = []
-    if not uploads:
-        return results
+    current = state["current"]
+    current_file = state["merges"].get(current, {}).get("id")
+    by_file = {m["id"]: m for m in state["merges"].values()}
+    pending = []
+    for e in storage.list(SAVE):
+        if e.id == current_file:
+            continue
+        if e.id in by_file:  # an earlier merged file a run didn't get to move
+            by_file[e.id]["id"] = storage.move(e.id, MERGED).id
+            _save_state(storage, state)
+        elif clock() - e.modified >= settle:
+            pending.append(e)
+    if not pending:
+        return []
+
+    now = datetime.fromtimestamp(clock(), timezone.utc)
+    stamp = f"{now:%Y-%m-%d %H.%M.%S}"
+    results: list[Result] = []
     with ExitStack() as stack:
         files = _Files(storage, stack)
-        for entry in uploads:
-            now = datetime.fromtimestamp(clock(), timezone.utc)
-            r = _process_one(storage, entry, state, files, now)
+        uploads = _open_uploads(storage, pending, files, stamp, results)
+        uploads = _drop_superseded(storage, uploads, state, stamp, results)
+
+        master = files.dataset(current_file) if current else Dataset()
+        merged: list[Result] = []
+        changed = False
+        for u in uploads:
+            match, base = _find_base(u.ds, state, files)
+            out, report = merge(master, u.ds, base)
+            r = Result(u.entry.name, u.device, "merged", match, summary=report.summary())
+            if (current or changed) and _same_content(out, master):
+                r.outcome = "unchanged"
+            else:
+                master, changed = out, True
+            merged.append(r)
+
+        if changed:
+            state["seq"] += 1
+            merge_id = uuid.uuid4().hex[:12]
+            sources = ", ".join(r.upload for r in merged if r.outcome == "merged")
+            master.stamp = {"merge_id": merge_id, "seq": str(state["seq"]), "created": now.isoformat(timespec="seconds"),
+                            "source": sources, "base": ", ".join(sorted({r.base.merge_id for r in merged if r.base}))}
+            out_path = files.dir / f"out-{merge_id}{EXTENSION}"
+            write_backup(master, out_path, device_name=WRITER)
+            written = storage.upload(SAVE, out_path, f"JWLSync {stamp}{EXTENSION}")
+            state["merges"][merge_id] = {"id": written.id, "seq": state["seq"], "source": sources}
+            state["current"] = merge_id
             _save_state(storage, state)
-            _log(storage, now, r)
-            results.append(r)
+            if current:
+                old = state["merges"][current]
+                old["id"] = storage.move(old["id"], MERGED).id
+                _save_state(storage, state)
+            for r in merged:
+                if r.outcome == "merged":
+                    r.merged = written.name
+        for u in uploads:
+            storage.move(u.entry.id, UPLOADS, f"{stamp} {u.entry.name}")
+        results += merged
+    for r in results:
+        _log(storage, now, r)
     return results

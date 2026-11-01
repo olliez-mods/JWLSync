@@ -18,6 +18,10 @@ SAVE = "JW Library Save"
 HISTORY = "History"
 USER = "User"
 FOLDERS = (SAVE, HISTORY, USER)
+# Inside History: previous merged files (kept as bases) and raw uploads (kept for recovery).
+MERGED = f"{HISTORY}/Merged"
+UPLOADS = f"{HISTORY}/Uploads"
+SUBFOLDERS = (MERGED, UPLOADS)
 
 
 @dataclass(frozen=True)
@@ -26,13 +30,16 @@ class Entry:
     name: str
     modified: float  # seconds since the epoch
     size: int
+    ours: bool = False  # written by JWLSync (Drive appProperties); LocalStorage can't tell
 
 
 class Storage(Protocol):
     def setup(self) -> None:
-        """Create the three folders. Anything else already in the root is moved into History."""
+        """Create the three folders and History's subfolders. Anything else already in the root is
+        moved into History."""
 
-    def list(self, folder: str) -> list[Entry]: ...
+    def list(self, folder: str) -> list[Entry]:
+        """Files (not folders) in folder: one of FOLDERS or SUBFOLDERS."""
 
     def download(self, file_id: str, dest: Path) -> None: ...
 
@@ -57,6 +64,7 @@ class LocalStorage:
         return Entry(path.relative_to(self.root).as_posix(), path.name, st.st_mtime, st.st_size)
 
     def _free_name(self, folder: Path, name: str) -> Path:
+        folder.mkdir(parents=True, exist_ok=True)  # subfolders of a folder set up before they existed
         target = folder / name
         stem, suffix, n = target.stem, target.suffix, 2
         while target.exists():
@@ -67,13 +75,16 @@ class LocalStorage:
     def setup(self) -> None:
         self.root.mkdir(parents=True, exist_ok=True)
         strays = [p for p in self.root.iterdir() if p.name not in FOLDERS]
-        for name in FOLDERS:
+        for name in FOLDERS + SUBFOLDERS:
             (self.root / name).mkdir(exist_ok=True)
         for p in strays:
             shutil.move(p, self._free_name(self.root / HISTORY, p.name))
 
     def list(self, folder: str) -> list[Entry]:
-        return sorted((self._entry(p) for p in (self.root / folder).iterdir() if p.is_file()),
+        path = self.root / folder
+        if not path.exists():
+            return []
+        return sorted((self._entry(p) for p in path.iterdir() if p.is_file()),
                       key=lambda e: (e.modified, e.name))
 
     def download(self, file_id: str, dest: Path) -> None:

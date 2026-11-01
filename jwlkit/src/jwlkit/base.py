@@ -10,6 +10,7 @@ upload has no base, and merging it deletes nothing.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Mapping
 
 from .model import Dataset
@@ -17,6 +18,9 @@ from .model import Dataset
 # Share of a candidate's entries the upload must still hold for a content match. Kept high: a base
 # that wrongly includes another device's entries makes them look deleted on this one.
 CONTENT_THRESHOLD = 0.98
+
+# Clock skew allowed between the device and the machine that wrote the candidate.
+CLOCK_SKEW = timedelta(minutes=5)
 
 
 @dataclass(frozen=True)
@@ -50,13 +54,16 @@ def find_base(upload: Dataset, candidates: Mapping[str, Dataset],
 
     A stamp naming a candidate wins outright. Otherwise, of the candidates the upload covers to at
     least `threshold`, the one sharing the most entries: a device that restored a later merged file
-    also covers the earlier ones, and the later file is the right base.
+    also covers the earlier ones, and the later file is the right base. A candidate written after
+    the upload last changed can't have been restored by that device, so it's skipped.
     """
     sid = stamp_id(upload)
     if sid in candidates:
         return BaseMatch(sid, "stamp", 1.0)
     best = None
     for merge_id, cand in candidates.items():
+        if upload.last_modified and cand.last_modified and upload.last_modified < cand.last_modified - CLOCK_SKEW:
+            continue
         share, shared = coverage(cand, upload)
         if share >= threshold and (best is None or shared > best[1]):
             best = (merge_id, shared, share)

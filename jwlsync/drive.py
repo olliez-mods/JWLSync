@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Protocol
 from urllib.parse import parse_qs, urlparse
 
-from .storage import FOLDERS, HISTORY, USER, Entry
+from .storage import FOLDERS, HISTORY, SUBFOLDERS, USER, Entry
 
 FOLDER_MIME = "application/vnd.google-apps.folder"
 SCOPES = ["https://www.googleapis.com/auth/drive"]
@@ -68,7 +68,8 @@ class DriveClient(Protocol):
 
 def _entry(meta: dict) -> Entry:
     modified = datetime.fromisoformat(meta["modifiedTime"].replace("Z", "+00:00")).timestamp()
-    return Entry(meta["id"], meta["name"], modified, int(meta.get("size") or 0))
+    ours = (meta.get("appProperties") or {}).get("jwlsync") == APP_PROPERTIES["jwlsync"]
+    return Entry(meta["id"], meta["name"], modified, int(meta.get("size") or 0), ours)
 
 
 class DriveStorage:
@@ -80,6 +81,13 @@ class DriveStorage:
         self._user_files: dict[str, str] = {}
 
     def _folder(self, name: str) -> str:
+        if "/" in name and name not in self._folders:
+            # A subfolder: found under its parent, or created (folders set up before it existed).
+            parent_name, child = name.rsplit("/", 1)
+            parent = self._folder(parent_name)
+            found = [f["id"] for f in self.client.children(parent)
+                     if f["mimeType"] == FOLDER_MIME and f["name"] == child]
+            self._folders[name] = found[0] if found else self.client.create_folder(parent, child)["id"]
         if name not in self._folders:
             for f in self.client.children(self.root_id):
                 if f["mimeType"] == FOLDER_MIME and f["name"] in FOLDERS:
@@ -99,6 +107,8 @@ class DriveStorage:
         for f in existing:
             if f["id"] not in self._folders.values():
                 self.client.move(f["id"], self._folders[HISTORY], self.root_id)
+        for name in SUBFOLDERS:
+            self._folder(name)
 
     def list(self, folder: str) -> list[Entry]:
         files = [f for f in self.client.children(self._folder(folder)) if f["mimeType"] != FOLDER_MIME]
