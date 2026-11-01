@@ -90,9 +90,11 @@ Test data: `testdata/originals/` — read-only copies of the user's real backups
   `GoogleDrive` is the real adapter (Google libs imported lazily), `open_folder(client, link)` validates.
   CLI: `python -m jwlsync {setup,process,watch} [FOLDER|DRIVE_LINK] [--token T] [--config F]`,
   `python -m jwlsync auth CLIENT_SECRETS --token T` (one-time bot login). Settings from
-  `jwlsync.ini` (git-ignored; template `jwlsync.example.ini`): token, interval, settle, and
-  `[folders]` — with no FOLDER given, the command runs on all of them.
-- `requirements.txt` — Google libs for the Drive adapter only; everything else is stdlib.
+  `config.ini` (git-ignored) via `quick_ini`, created/updated from `config.ini.template`
+  (`load_file(..., template=True)`): token, interval, settle, and `folders` as a `|` list — with
+  no FOLDER given, the command runs on all of them. quick_ini comments are `#`, and `#` in a value
+  must be escaped as `\#`.
+- `requirements.txt` — Google libs for the Drive adapter, `quick_ini` for the CLI config; `jwlkit` is stdlib-only.
 - `tests/` — service tests (simulated devices + replay of the real backups), Drive tests on an
   in-memory fake (`fake_drive.py`), and `test_google_drive.py`: the real adapter against
   googleapiclient's HttpMockSequence (skipped if the libs aren't installed). On this machine the

@@ -13,4 +13,5 @@ dist/
 secrets/
 
 # Local settings: folder links grant edit access
-jwlsync.ini
+config.ini
+config.ini.bak

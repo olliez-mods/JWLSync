@@ -4,20 +4,20 @@ FOLDER is a local directory or a Google Drive folder link; Drive needs a token (
 Without FOLDER, every folder in the config's [folders] section is used.
 python -m jwlsync auth CLIENT_SECRETS --token TOKEN: log in once as the bot account.
 
-Settings come from jwlsync.ini (or --config); command-line flags override it. See jwlsync.example.ini.
+Settings come from config.ini (or --config), created from config.ini.template on first run;
+command-line flags override it.
 """
 
 from __future__ import annotations
 
 import argparse
-import configparser
 import time
 from pathlib import Path
 
 from .service import process
 from .storage import LocalStorage
 
-DEFAULT_CONFIG = "jwlsync.ini"
+DEFAULT_CONFIG = "config.ini"
 
 
 def _print(results) -> None:
@@ -39,23 +39,31 @@ def _storage(folder: str, token: str | None):
     return open_folder(GoogleDrive(load_credentials(token)), folder)
 
 
-def _load_config(path: str | None) -> tuple[dict, dict]:
-    """([jwlsync] settings, [folders] name -> folder). Relative paths are relative to the file."""
+def _load_config(path: str | None) -> tuple[dict, list[str]]:
+    """([jwlsync] settings, folders). Relative paths are relative to the file.
+
+    A missing config.ini is created from config.ini.template, and settings the template gains later
+    are added to it (quick_ini's template sync)."""
+    from quick_ini import QuickIni
+
     file = Path(path or DEFAULT_CONFIG)
-    if not file.exists():
+    if not file.exists() and not Path(f"{file}.template").exists():
         if path:
             raise SystemExit(f"config file not found: {path}")
-        return {}, {}
-    cp = configparser.ConfigParser(interpolation=None)
-    cp.read(file, encoding="utf-8")
-    settings = dict(cp["jwlsync"]) if cp.has_section("jwlsync") else {}
+        return {}, []
+    if not QuickIni.load_file(str(file), template=True):
+        raise SystemExit(f"can't load {file}: {QuickIni.get_last_error()}")
+    report = QuickIni.get_sync_report()
+    if report and report["created"]:
+        print(f"created {file} from its template; add your folders to it")
+    elif report and report["added"]:
+        print(f"added new settings to {file}: {', '.join(report['added'])}")
+    settings = {k: v for k, v in QuickIni.get_all("jwlsync").items() if v is not None}
     if settings.get("token"):
-        settings["token"] = str(file.parent / settings["token"])
-    folders = dict(cp["folders"]) if cp.has_section("folders") else {}
-    for name, folder in folders.items():
-        if not folder.startswith("https://"):
-            folders[name] = str(file.parent / folder)
-    return settings, folders
+        settings["token"] = str(file.parent / str(settings["token"]))
+    listed = settings.pop("folders", None) or []
+    folders = [str(f) for f in (listed if isinstance(listed, list) else [listed]) if f]
+    return settings, [f if f.startswith("https://") else str(file.parent / f) for f in folders]
 
 
 def main(argv=None) -> None:
@@ -81,9 +89,9 @@ def main(argv=None) -> None:
         authorize(args.folder, token)
         print(f"saved token to {token}")
         return
-    targets = [args.folder] if args.folder else list(folders.values())
+    targets = [args.folder] if args.folder else folders
     if not targets:
-        raise SystemExit("no folder given and none in the config's [folders] section")
+        raise SystemExit("no folder given and no folders in the config")
     storages = [(t, _storage(t, token)) for t in targets]
     if args.command == "setup":
         for t, storage in storages:
