@@ -1,47 +1,46 @@
 {% extends "base.html" %}
-{% block subheading %}<p>Keep JW Library the same on all your devices</p>{% endblock %}
 {% block content %}
 {% if folder %}
-<div class="section center">
-    <h2>You're signed in</h2>
-    <a class="button full" href="{{ url_for('me') }}">Go to your folder</a>
+<div class="section">
+    <div class="section-title">Signed In</div>
+    <a class="button" href="{{ url_for('me') }}">Go to your folder</a>
 </div>
 {% elif invite %}
 <div class="section">
-    <h2>Set up your folder</h2>
-    {% if error %}<p class="error">{{ error }}</p>{% endif %}
-    <ol class="setup">
+    <div class="section-title">Set Up Your Folder</div>
+    {% if error %}<div class="status-display bad">{{ error }}</div>{% endif %}
+    <ol>
         <li>Create a folder in Google Drive</li>
         <li>Share it: <i>General access → Anyone with the link → Editor</i></li>
         <li>Copy the link and paste it here</li>
     </ol>
-    <form class="stack" method="post" action="{{ url_for('add_folder') }}">
-        <input name="link" value="{{ link or '' }}" placeholder="https://drive.google.com/drive/folders/..." aria-label="Drive folder link" required autofocus>
-        <button>Start syncing</button>
+    <form class="row" method="post" action="{{ url_for('add_folder') }}">
+        <input class="wide" name="link" value="{{ link or '' }}" placeholder="https://drive.google.com/drive/folders/..." aria-label="Drive folder link" required autofocus>
+        <button>Start Syncing</button>
     </form>
 </div>
 {% else %}
 <div class="section">
-    <h2 class="center">Enter your invite code</h2>
-    {% if error %}<p class="error">{{ error }}</p>{% endif %}
-    <form class="stack" method="post" action="{{ url_for('enter_code') }}">
+    <div class="section-title">Invite Code</div>
+    {% if error %}<div class="status-display bad">{{ error }}</div>{% endif %}
+    <form class="row" method="post" action="{{ url_for('enter_code') }}">
         <input class="code" name="code" placeholder="XXXXX-XXXXX" maxlength="11" autocomplete="off" aria-label="Invite code" required autofocus>
         <button>Continue</button>
+        <span class="hint">Invite only. Already set up? Enter your code to sign back in.</span>
     </form>
-    <p class="hint">Invite only. Already set up? Enter your code to sign back in.</p>
 </div>
 {% endif %}
 
 <div class="section">
-    <h2>How it works</h2>
-    <div class="steps3">
-        <div><span class="num">1</span><b>Back up</b>into <i>JW Library Save</i></div>
-        <div><span class="num">2</span><b>Wait</b>a few seconds</div>
-        <div><span class="num">3</span><b>Restore</b>the merged file</div>
-    </div>
-    <p class="muted">JW Library can only back up and restore. JWLSync watches your Google Drive folder,
-    merges the backups from all your devices (notes, highlights, tags, bookmarks) and leaves one up
-    to date backup any device can restore. Restoring replaces what's on the device, so always back
-    up first.</p>
+    <div class="section-title">How It Works</div>
+    <p>JW Library can only back up and restore. JWLSync watches your Google Drive folder, merges the
+    backups from all your devices (notes, highlights, tags, bookmarks) and leaves one up to date
+    backup any device can restore.</p>
+    <ol>
+        <li><b>Back up</b> into your folder's <i>JW Library Save</i> folder</li>
+        <li><b>Wait</b> a few seconds for the merge</li>
+        <li><b>Restore</b> from the merged file there</li>
+    </ol>
+    <p class="hint">Restoring replaces what's on the device, so always back up first.</p>
 </div>
 {% endblock %}

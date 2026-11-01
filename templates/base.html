@@ -7,13 +7,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=css_version) }}">
 </head>
 <body>
-    <main class="{% block main_class %}{% endblock %}">
-        <header>
-            <h1>JWLSync</h1>
-            {% block subheading %}{% endblock %}
-        </header>
-        {% block content %}{% endblock %}
-        <footer>JWLSync</footer>
-    </main>
+    <h1>JWLSync</h1>
+    <p class="subtitle">{% block subheading %}Keep JW Library the same on all your devices{% endblock %}</p>
+    {% block content %}{% endblock %}
+    <footer>JWLSync</footer>
 </body>
 </html>

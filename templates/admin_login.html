@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Admin · JWLSync{% endblock %}
-{% block subheading %}<p>Admin</p>{% endblock %}
+{% block subheading %}Admin{% endblock %}
 {% block content %}
 <div class="section">
-    <h2 class="center">Sign in</h2>
-    {% if error %}<p class="error">{{ error }}</p>{% endif %}
-    <form class="stack" method="post" action="{{ url_for('admin_login') }}">
+    <div class="section-title">Authentication</div>
+    {% if error %}<div class="status-display bad">{{ error }}</div>{% endif %}
+    <form class="row" method="post" action="{{ url_for('admin_login') }}">
         <input type="password" name="admin_code" placeholder="Admin code" aria-label="Admin code" required autofocus>
-        <button>Sign in</button>
+        <button>Sign In</button>
     </form>
 </div>
 {% endblock %}

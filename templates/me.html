@@ -1,53 +1,53 @@
 {% extends "base.html" %}
 {% block title %}Your folder · JWLSync{% endblock %}
-{% block subheading %}<p>{{ invite["name"] }}'s folder</p>{% endblock %}
+{% block subheading %}{{ invite["name"] }}'s folder{% endblock %}
 {% block content %}
-{% set label = {"active": "Syncing", "paused": "Paused", "stopped": "Stopped"}[folder["status"]] %}
+{% set look = {"active": ("good", "✓ Syncing"), "paused": ("warn", "Paused"), "stopped": ("bad", "Stopped")}[folder["status"]] %}
 <div class="section">
     <div class="section-head">
-        <h2>Status</h2>
-        <a class="muted" href="{{ folder['link'] }}" target="_blank" rel="noopener">Open Drive folder ↗</a>
+        <div class="section-title">Status</div>
+        <a class="hint" href="{{ folder['link'] }}" target="_blank" rel="noopener">Open Drive folder ↗</a>
     </div>
-    <div class="banner {{ folder['status'] }}">
-        <b>{{ label }}</b>
-        <span>Last checked {{ folder["last_check"]|ago }} · last merge {{ folder["last_merge"]|ago }}</span>
+    <div class="status-display {{ look[0] }}">
+        {{ look[1] }}
+        <div class="detail">Last checked {{ folder["last_check"]|ago }} · last merge {{ folder["last_merge"]|ago }}</div>
     </div>
-    {% if folder["last_error"] %}<p class="error">Last check failed: {{ folder["last_error"] }}</p>{% endif %}
-    <form class="actions" method="post" action="{{ url_for('me_status') }}">
+    {% if folder["last_error"] %}<div class="status-display bad">Last check failed: {{ folder["last_error"] }}</div>{% endif %}
+    <form class="row" method="post" action="{{ url_for('me_status') }}">
         {% if folder["status"] == "active" %}
             <button name="action" value="pause" class="secondary">Pause</button>
         {% else %}
-            <button name="action" value="resume">Resume syncing</button>
+            <button name="action" value="resume">Resume Syncing</button>
         {% endif %}
         {% if folder["status"] != "stopped" %}
             <button name="action" value="stop" class="danger"
-                    onclick="return confirm('Stop syncing? Your files stay in Drive, and you can resume later.')">Stop syncing</button>
+                    onclick="return confirm('Stop syncing? Your files stay in Drive, and you can resume later.')">Stop Syncing</button>
         {% endif %}
     </form>
 </div>
 
 <div class="section">
-    <h2>Recent merges</h2>
-    <div class="inset">
+    <div class="section-title">Recent Merges</div>
+    <div class="list">
     {% if recent is none %}
         <div class="empty">Couldn't read your merge log right now.</div>
     {% elif not recent %}
-        <div class="empty">Nothing yet. Back up from a device into <i>JW Library Save</i>.</div>
+        <div class="empty">Nothing yet. Back up from a device into JW Library Save.</div>
     {% else %}
         {% for m in recent %}
         <div class="item">
             <div class="item-head">
-                <span><b>{{ m.device }}</b> · {{ m.outcome }}</span>
-                <span class="muted">{{ m.when|ago }}</span>
+                <span><b>{{ m.device }}</b> | {{ m.outcome }}</span>
+                <span class="time">{{ m.when|ago }}</span>
             </div>
-            {% if m.changes %}<div class="item-sub">{{ m.changes|join(" · ") }}</div>{% endif %}
+            {% if m.changes %}<div class="sub">{{ m.changes|join(" · ") }}</div>{% endif %}
         </div>
         {% endfor %}
     {% endif %}
     </div>
 </div>
 
-<form class="actions" method="post" action="{{ url_for('logout') }}">
-    <button class="secondary small">Sign out</button>
+<form method="post" action="{{ url_for('logout') }}">
+    <button class="secondary small">Sign Out</button>
 </form>
 {% endblock %}
